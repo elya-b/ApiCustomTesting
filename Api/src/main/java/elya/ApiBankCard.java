@@ -1,8 +1,9 @@
 package elya;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import elya.constants.CardType;
-import elya.constants.Currency;
+import elya.card.BankCard;
+import elya.card.constants.CardType;
+import elya.card.constants.Currency;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 

@@ -1,4 +1,4 @@
-package elya.constants;
+package elya.card.constants;
 
 import java.util.Arrays;
 import java.util.Optional;

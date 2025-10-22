@@ -9,7 +9,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>ApiEmulator</artifactId>
+    <artifactId>Api</artifactId>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -30,7 +30,7 @@
 
         <dependency>
             <groupId>elya</groupId>
-            <artifactId>Card-object</artifactId>
+            <artifactId>Objects</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>

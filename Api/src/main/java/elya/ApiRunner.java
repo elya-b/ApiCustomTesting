@@ -4,18 +4,18 @@ import lombok.Getter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
-public class ApiEmulatorRunner {
+public class ApiRunner {
     @Getter
     private final int port;
     private ConfigurableApplicationContext appContext;
 
-    public ApiEmulatorRunner(int port) {
+    public ApiRunner(int port) {
         this.port = port;
     }
 
     public void start() {
         String[] args = new String[]{"--server.port=" + port};
-        this.appContext = SpringApplication.run(ApiEmulator.class);
+        this.appContext = SpringApplication.run(Api.class);
     }
 
     public void stop() {

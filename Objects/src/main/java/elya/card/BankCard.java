@@ -1,7 +1,7 @@
-package elya;
+package elya.card;
 
-import elya.constants.CardType;
-import elya.constants.Currency;
+import elya.card.constants.CardType;
+import elya.card.constants.Currency;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

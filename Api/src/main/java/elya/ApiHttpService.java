@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-public class ApiEmulatorHttpService {
+public class ApiHttpService {
     private final Map<String, String> authTokens = new ConcurrentHashMap<>();
     @Setter
     private Map<String, Object> mockedResponse = null;
@@ -20,14 +20,18 @@ public class ApiEmulatorHttpService {
     }
 
     public Map<String, String> generateAuthToken(String login, String password) {
-        String authToken = "";
+        if ((login == null) || login.isEmpty() || (password == null) || password.isEmpty()) {
+            log.error("Invalid or missing credentials.");
+            return Map.of("error", "Invalid or missing credentials.");
+        }
 
-        if ((login != null) || !login.isEmpty() || (password != null) || !password.isEmpty()) {
-            authToken = UUID.randomUUID().toString();
-        } else log.error("Invalid or missing credentials");
+        String authToken = UUID.randomUUID().toString();
 
         authTokens.put(authToken, login);
         return authTokens;
     }
+
+
+
 
 }
