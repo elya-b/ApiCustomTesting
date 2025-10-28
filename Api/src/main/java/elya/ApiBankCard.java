@@ -17,6 +17,9 @@ import java.util.Locale;
 @Slf4j
 public class ApiBankCard {
 
+    @JsonProperty("CARD_ID")
+    private Integer cardId;
+
     @JsonProperty("CARD_NUMBER")
     private Integer cardNumber;
 
@@ -31,6 +34,14 @@ public class ApiBankCard {
 
     @JsonProperty("BALANCE")
     private BigDecimal balance;
+
+    public Integer getCardId() {
+        return cardId;
+    }
+
+    public void setCardId(Integer cardId) {
+        this.cardId = cardId;
+    }
 
     public Integer getCardNumber() {
         return cardNumber;
@@ -75,6 +86,7 @@ public class ApiBankCard {
     public BankCard getBankCard() {
         var bankCard = new BankCard();
 
+        bankCard.setCardId(cardId);
         bankCard.setCardNumber(cardNumber);
         bankCard.setCardType(cardType.equalsIgnoreCase("debit") ? CardType.DEBIT : CardType.CREDIT);
         bankCard.setCardStatus(cardStatus);

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-import static elya.ApiConstants.*;
+import static elya.constants.ApiConstants.*;
 
 @RestController
 @RequiredArgsConstructor

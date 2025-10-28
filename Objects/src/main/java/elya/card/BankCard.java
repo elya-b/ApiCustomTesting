@@ -15,6 +15,7 @@ import java.util.Objects;
 @Getter
 @Setter
 public class BankCard {
+    private Integer cardId;
     private Integer cardNumber;
     private CardType cardType;
     private Boolean cardStatus;
@@ -61,25 +62,27 @@ public class BankCard {
 //        this.balance = balance;
 //    }
 
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         BankCard bankCard = (BankCard) o;
-        return Objects.equals(cardNumber, bankCard.cardNumber) && Objects.equals(cardType, bankCard.cardType) && Objects.equals(cardStatus, bankCard.cardStatus) && Objects.equals(currency, bankCard.currency) && Objects.equals(balance, bankCard.balance);
+        return Objects.equals(cardId, bankCard.cardId) && Objects.equals(cardNumber, bankCard.cardNumber) && cardType == bankCard.cardType && Objects.equals(cardStatus, bankCard.cardStatus) && currency == bankCard.currency && Objects.equals(balance, bankCard.balance);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(cardNumber, cardType, cardStatus, currency, balance);
+        return Objects.hash(cardId, cardNumber, cardType, cardStatus, currency, balance);
     }
 
     @Override
     public String toString() {
         return "BankCard{" +
-                "cardNumber=" + cardNumber +
-                ", cardType='" + cardType + '\'' +
+                "cardId=" + cardId +
+                ", cardNumber=" + cardNumber +
+                ", cardType=" + cardType +
                 ", cardStatus=" + cardStatus +
-                ", currency='" + currency + '\'' +
+                ", currency=" + currency +
                 ", balance=" + balance +
                 '}';
     }

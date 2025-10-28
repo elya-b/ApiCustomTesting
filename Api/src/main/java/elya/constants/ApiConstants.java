@@ -1,4 +1,4 @@
-package elya;
+package elya.constants;
 
 public class ApiConstants {
     public static final String URL_TOKEN = "/bank/auth/token";

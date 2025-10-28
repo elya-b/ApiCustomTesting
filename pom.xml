@@ -12,6 +12,7 @@
         <module>Api</module>
         <module>Objects</module>
         <module>Services</module>
+        <module>RestClient</module>
     </modules>
 
     <properties>

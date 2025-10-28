@@ -12,7 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class ApiEmulator {
+public class ApiEmulatorService {
     private final String host;
     private final int port;
     private ConfigurableApplicationContext appContext;
@@ -23,7 +23,7 @@ public class ApiEmulator {
     @Getter
     private String authToken;
 
-    public ApiEmulator(String host, int port) {
+    public ApiEmulatorService(String host, int port) {
         this.host = host;
         this.port = port;
     }
