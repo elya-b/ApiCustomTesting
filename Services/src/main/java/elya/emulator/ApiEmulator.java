@@ -76,9 +76,8 @@ public class ApiEmulator {
         Object cards = responseData.get("cards");
 
         bankCards = cards != null ?
-                objectMapper.convertValue(cards, new TypeReference<List<ApiBankCard>>() {}) : Collections.emptyList();
+                objectMapper.convertValue(cards, new TypeReference<>() {}) : Collections.emptyList();
 
         return bankCards;
     }
-
 }

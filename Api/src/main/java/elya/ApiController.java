@@ -19,7 +19,13 @@ public class ApiController {
         String login = request.get("login");
         String password = request.get("password");
 
-        return ResponseEntity.ok(service.generateAuthToken(login, password));
+        Map<String, String> response = service.generateAuthToken(login, password);
+
+        if (HttpStatus.UNAUTHORIZED.value() == Integer.parseInt(response.getOrDefault("status", "0"))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping(URL_BANK_CARD_MOCK_RESPONSE)
