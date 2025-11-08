@@ -23,9 +23,9 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
                 OAuth2ClientAutoConfiguration.class
         }
 )
-public class Api {
+public class ApiEmulator {
 
     public static void main(String[] args) {
-        SpringApplication.run(Api.class, args);
+        SpringApplication.run(ApiEmulator.class, args);
     }
 }

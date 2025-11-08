@@ -19,6 +19,14 @@ public class RestClientApiResponse {
     private Map<String, String> headers = new HashMap<>();
 
     public boolean isSuccessful() {
-        return "200".equals(status.get("code"));
+        String codeString = status.get("code");
+        if (codeString == null) return false;
+
+        try {
+            int code = Integer.parseInt(codeString);
+            return code >= 200 && code < 300;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 }

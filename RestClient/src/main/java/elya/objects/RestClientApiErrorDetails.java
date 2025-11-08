@@ -1,6 +1,6 @@
 package elya.objects;
 
-import elya.ApiHttpStatusesGenerator;
+import elya.ApiEmulatorStatusesGenerator;
 import org.springframework.http.HttpStatus;
 
 import java.util.Map;
@@ -9,7 +9,7 @@ public class RestClientApiErrorDetails {
     private final Map<String, String> statusDetails;
     private final String responseBody;
 
-    public RestClientApiErrorDetails(RestClientApiResponse response, ApiHttpStatusesGenerator generator) {
+    public RestClientApiErrorDetails(RestClientApiResponse response, ApiEmulatorStatusesGenerator generator) {
         int statusCode = Integer.parseInt(response.getStatus().get("code"));
         HttpStatus httpStatus = HttpStatus.resolve(statusCode);
 

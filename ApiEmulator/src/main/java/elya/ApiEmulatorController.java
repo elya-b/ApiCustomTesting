@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-import static elya.constants.ApiConstants.*;
+import static elya.constants.ApiEmulatorConstants.*;
 
 @RestController
 @RequiredArgsConstructor
-public class ApiController {
-    private final ApiHttpService service;
+public class ApiEmulatorController {
+    private final ApiEmulatorService service;
 
     @PostMapping(URL_TOKEN)
     public ResponseEntity<Map<String, String>> generateAuthToken(@RequestBody Map<String, String> request) {
@@ -21,7 +21,7 @@ public class ApiController {
 
         Map<String, String> response = service.generateAuthToken(login, password);
 
-        if (HttpStatus.UNAUTHORIZED.value() == Integer.parseInt(response.getOrDefault("status", "0"))) {
+        if (HttpStatus.UNAUTHORIZED.value() == Integer.parseInt(response.get("status"))) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
@@ -43,13 +43,13 @@ public class ApiController {
     }
 
     @GetMapping(URL_BANK_CARD_DATA)
-    public ResponseEntity<Map<String, Object>> getApiBankCards(@RequestHeader String authorization) {
-        Map<String, Object> response = service.getApiBankCards(authorization);
+    public ResponseEntity<Map<String, Object>> getApiBankCards(@RequestHeader String token) {
+        Map<String, Object> response = service.getApiBankCards(token);
 
         if (HttpStatus.UNAUTHORIZED.value() == ((Number) response.getOrDefault("status", 0)).intValue()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
-        return ResponseEntity.ok(service.getApiBankCards(authorization));
+        return ResponseEntity.ok(response);
     }
 }

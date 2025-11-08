@@ -1,8 +1,9 @@
 package elya;
 
-import elya.credentials.ApiEmulatorCredentialsService;
+import elya.services.ApiEmulatorCredentialsService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -14,15 +15,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-public class ApiHttpService implements ApiHttpStatusesGenerator {
+public class ApiEmulatorService implements ApiEmulatorStatusesGenerator {
     private final Map<String, String> authTokens = new ConcurrentHashMap<>();
+    @Autowired
+    private ApiEmulatorCredentialsService credentialsService;
+
     @Setter
     private Map<String, Object> mockedResponse = null;
-    private final ApiEmulatorCredentialsService credentialsService;
-
-    public ApiHttpService(ApiEmulatorCredentialsService credentialsService) {
-        this.credentialsService = credentialsService;
-    }
 
     public void clearMockedResponse() {
         this.mockedResponse = null;
@@ -44,15 +43,15 @@ public class ApiHttpService implements ApiHttpStatusesGenerator {
         return authTokens;
     }
 
-    protected boolean validateAuthToken(String authorization) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) return false;
+    protected boolean validateAuthToken(String token) {
+        if (token == null || !token.startsWith("Bearer ")) return false;
 
-        String generatedToken = authorization.substring(7);
+        String generatedToken = token.substring(7);
         return authTokens.containsValue(generatedToken);
     }
 
-    public Map<String, Object> getApiBankCards(String authorization) {
-        if (!validateAuthToken(authorization)) {
+    public Map<String, Object> getApiBankCards(String token) {
+        if (!validateAuthToken(token)) {
             generateHttpStatus(HttpStatus.UNAUTHORIZED);
         }
 

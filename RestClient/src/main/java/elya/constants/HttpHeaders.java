@@ -11,7 +11,7 @@ public enum HttpHeaders {
         this.headerName = headerName;
     }
 
-    public String getHeaderName() {
+    public String getName() {
         return headerName;
     }
 }

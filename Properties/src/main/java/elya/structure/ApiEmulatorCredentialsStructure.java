@@ -1,4 +1,4 @@
-package main.java.elya.propertiesbeans;
+package elya.structure;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -10,7 +10,7 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties(prefix = "apicredentials")
 @PropertySource(value = "classpath:apicredentials.properties", ignoreResourceNotFound = true)
-public class ApiEmulatorCredentials {
+public class ApiEmulatorCredentialsStructure {
     private List<Credential> users = new ArrayList<>();
 
     public List<Credential> getUsers() {

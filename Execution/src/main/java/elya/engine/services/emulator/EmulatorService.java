@@ -1,10 +1,10 @@
-package elya.emulator;
+package elya.engine.services.emulator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.Api;
-import elya.ApiBankCard;
-import elya.ApiHttpService;
+import elya.ApiEmulator;
+import elya.ApiEmulatorService;
+import elya.objects.ApiEmulatorBankCard;
 import lombok.Getter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -12,18 +12,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class ApiEmulatorService {
+public class EmulatorService {
     private final String host;
     private final int port;
     private ConfigurableApplicationContext appContext;
     @Getter
-    private ApiHttpService service;
+    private ApiEmulatorService service;
     @Getter
     private String url;
     @Getter
     private String authToken;
 
-    public ApiEmulatorService(String host, int port) {
+    public EmulatorService(String host, int port) {
         this.host = host;
         this.port = port;
     }
@@ -32,8 +32,8 @@ public class ApiEmulatorService {
         String[] args = new String[]{"--server.port=" + port};
 
         try {
-        this.appContext = SpringApplication.run(Api.class, args);
-        this.service = appContext.getBean(ApiHttpService.class);
+        this.appContext = SpringApplication.run(ApiEmulator.class, args);
+        this.service = appContext.getBean(ApiEmulatorService.class);
         this.url = "http://" + host + ":" + port;
 
         Thread.sleep(10000);
@@ -62,9 +62,9 @@ public class ApiEmulatorService {
         this.authToken = authTokenResponse.get(login);
     }
 
-    public List<ApiBankCard> getBankCards(String authToken) {
+    public List<ApiEmulatorBankCard> getBankCards(String authToken) {
         ObjectMapper objectMapper = new ObjectMapper();
-        List<ApiBankCard> bankCards;
+        List<ApiEmulatorBankCard> bankCards;
 
         Map<String, Object> response = service.getApiBankCards("Bearer " + authToken);
         Map<String, Object> responseData = (Map<String, Object>) response.get("response");
