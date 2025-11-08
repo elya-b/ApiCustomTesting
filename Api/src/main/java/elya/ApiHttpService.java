@@ -1,5 +1,6 @@
 package elya;
 
+import elya.credentials.ApiEmulatorCredentialsService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -13,19 +14,28 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-public class ApiHttpService {
+public class ApiHttpService implements ApiHttpStatusesGenerator {
     private final Map<String, String> authTokens = new ConcurrentHashMap<>();
     @Setter
     private Map<String, Object> mockedResponse = null;
+    private final ApiEmulatorCredentialsService credentialsService;
+
+    public ApiHttpService(ApiEmulatorCredentialsService credentialsService) {
+        this.credentialsService = credentialsService;
+    }
 
     public void clearMockedResponse() {
         this.mockedResponse = null;
     }
 
     public Map<String, String> generateAuthToken(String login, String password) {
-        if ((login == null) || login.isEmpty() || (password == null) || password.isEmpty()) {
+        boolean credentialsMatch = credentialsService.getApiEmulatorCredentials()
+                .getUsers().stream()
+                .anyMatch(cred -> login.equals(cred.getLogin()) && password.equals(cred.getPassword()));
+
+        if ((login == null) || login.isEmpty() || (password == null) || password.isEmpty() || !credentialsMatch) {
             log.error("Invalid or missing credentials.");
-            return Map.of("error", "Invalid or missing credentials.");
+            return generateHttpStatus(HttpStatus.UNAUTHORIZED);
         }
 
         String authToken = UUID.randomUUID().toString();
@@ -43,8 +53,7 @@ public class ApiHttpService {
 
     public Map<String, Object> getApiBankCards(String authorization) {
         if (!validateAuthToken(authorization)) {
-            HttpStatus status = HttpStatus.UNAUTHORIZED;
-            return Map.of("status", status.value(), status.series().toString(), status.getReasonPhrase());
+            generateHttpStatus(HttpStatus.UNAUTHORIZED);
         }
 
         if (mockedResponse != null) {
@@ -60,8 +69,4 @@ public class ApiHttpService {
                     );
         }
     }
-
-
-
-
 }

@@ -12,7 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class ApiEmulator {
+public class ApiEmulatorService {
     private final String host;
     private final int port;
     private ConfigurableApplicationContext appContext;
@@ -23,7 +23,7 @@ public class ApiEmulator {
     @Getter
     private String authToken;
 
-    public ApiEmulator(String host, int port) {
+    public ApiEmulatorService(String host, int port) {
         this.host = host;
         this.port = port;
     }
@@ -76,9 +76,8 @@ public class ApiEmulator {
         Object cards = responseData.get("cards");
 
         bankCards = cards != null ?
-                objectMapper.convertValue(cards, new TypeReference<List<ApiBankCard>>() {}) : Collections.emptyList();
+                objectMapper.convertValue(cards, new TypeReference<>() {}) : Collections.emptyList();
 
         return bankCards;
     }
-
 }
