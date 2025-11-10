@@ -13,13 +13,13 @@ import java.util.Map;
 @EqualsAndHashCode
 @ToString
 public class RestClientApiResponse {
-    private Map<String, String> status;
+    private Map<String, String> statuses;
     private String responseAsString;
     private JsonElement responseAsJson;
     private Map<String, String> headers = new HashMap<>();
 
     public boolean isSuccessful() {
-        String codeString = status.get("code");
+        String codeString = statuses.get("code");
         if (codeString == null) return false;
 
         try {

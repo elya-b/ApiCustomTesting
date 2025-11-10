@@ -24,4 +24,5 @@ public class RestClientApiHelper {
             return null;
         }
         return gson.toJsonTree(object);
-    }}
+    }
+}

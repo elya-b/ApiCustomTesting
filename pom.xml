@@ -29,11 +29,9 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring-boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
+                <groupId>elya</groupId>
+                <artifactId>ApiEmulator</artifactId>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
@@ -42,6 +40,10 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>elya</groupId>
+                <artifactId>Properties</artifactId>
+                <version>${project.version}</version> </dependency>
             <dependency>
                 <groupId>elya</groupId>
                 <artifactId>RestClient</artifactId>
@@ -53,19 +55,21 @@
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
             </dependency>
+
             <dependency>
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp</artifactId>
                 <version>${okhttp.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-    </dependencies>
 
 </project>

@@ -38,8 +38,8 @@ public class RestClientApiEngine implements IRestClientApiEngine, ApiEmulatorSta
     @Override
     public RestClientApiResponse sendRequest(HttpMethod method, String urlPath, JsonElement jsonBody, Map<String, String> headers) {
         String fullUrl = urlPath.startsWith("http") ? urlPath : baseUrl + urlPath;
-        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder().uri(URI.create(fullUrl));
 
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder().uri(URI.create(fullUrl));
         headers.forEach(requestBuilder::header);
 
         if (jsonBody != null) {
@@ -91,11 +91,11 @@ public class RestClientApiEngine implements IRestClientApiEngine, ApiEmulatorSta
             HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             int statusCode = httpResponse.statusCode();
+            clientResponse.setStatuses(generateHttpStatus(HttpStatus.valueOf(statusCode)));
+
             String body = httpResponse.body();
-
-            clientResponse.setStatus(generateHttpStatus(HttpStatus.valueOf(statusCode)));
-
             clientResponse.setResponseAsString(body);
+
 
             Map<String, String> headersMap = httpResponse.headers().map().entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getKey,
@@ -111,11 +111,11 @@ public class RestClientApiEngine implements IRestClientApiEngine, ApiEmulatorSta
         } catch (IOException | InterruptedException e) {
             log.error("HTTP request failed for URL: {}", request.uri(), e);
 
-            clientResponse.setStatus(generateHttpStatus(HttpStatus.SERVICE_UNAVAILABLE));
+            clientResponse.setStatuses(generateHttpStatus(HttpStatus.SERVICE_UNAVAILABLE));
             clientResponse.setResponseAsString(e.getMessage());
         } catch (IllegalArgumentException e) {
             log.error("Unknown HTTP status code received for URL: {}. Code: {}", request.uri(), e.getMessage());
-            clientResponse.setStatus(generateHttpStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+            clientResponse.setStatuses(generateHttpStatus(HttpStatus.INTERNAL_SERVER_ERROR));
         }
 
         return clientResponse;

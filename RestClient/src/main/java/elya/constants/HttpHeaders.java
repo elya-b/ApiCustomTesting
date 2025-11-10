@@ -2,7 +2,6 @@ package elya.constants;
 
 public enum HttpHeaders {
     AUTHORIZATION("Authorization"),
-
     ;
 
     private final String headerName;
