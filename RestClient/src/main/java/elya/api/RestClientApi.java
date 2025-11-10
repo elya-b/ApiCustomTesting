@@ -5,30 +5,31 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
-import elya.ApiBankCard;
 import elya.RestClientApiHelper;
-import elya.constants.ApiConstants;
+import elya.constants.ApiEmulatorConstants;
+import elya.objects.ApiEmulatorBankCard;
+import elya.constants.HttpHeaders;
 import elya.json2object.ApiBankCardSerializerDeserializer;
-import elya.objects.RestClientApiResponse;
 import elya.objects.Token;
-import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class RestClientApi {
 
-    private final RestClientApiEngine engine;
+    private final IRestClientApiEngine engine;
     private final Gson gson;
-    private final Type bankCardListType = new TypeToken<List<ApiBankCard>>() {}.getType();
+    private final Type bankCardListType = new TypeToken<List<ApiEmulatorBankCard>>() {}.getType();
 
-    public RestClientApi(String baseUrl, ApiBankCardSerializerDeserializer cardDeserializer) {
-        this.engine = new RestClientApiEngine(baseUrl);
+    public RestClientApi(IRestClientApiEngine engine, ApiBankCardSerializerDeserializer cardDeserializer) {
+        this.engine = engine;
 
         this.gson = new GsonBuilder()
-                .registerTypeAdapter(ApiBankCard.class, cardDeserializer)
+                .registerTypeAdapter(ApiEmulatorBankCard.class, cardDeserializer)
                 .create();
     }
 
@@ -37,60 +38,61 @@ public class RestClientApi {
         body.addProperty("login", login);
         body.addProperty("password", password);
 
-        RestClientApiResponse response = engine.sendRequest("POST", ApiConstants.URL_TOKEN, body, Collections.emptyMap());
+        JsonElement responseJson = engine.post(ApiEmulatorConstants.URL_TOKEN, body, Collections.emptyMap());
 
-        if (response.isSuccessful() && response.getResponseAsJson() != null) {
-            return this.gson.fromJson(response.getResponseAsJson(), Token.class);
+        if (responseJson != null) {
+            return RestClientApiHelper.castFromJson(responseJson, Token.class);
         }
 
-        log.error("Failed to generate token. Status: {}", response.getStatus().get("code"));
+        log.error("Failed to generate token.");
         return null;
     }
 
-    public List<ApiBankCard> getApiBankCards(String token) {
-        Map<String, String> headers = Map.of("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token);
+    public List<ApiEmulatorBankCard> getApiBankCards(String token) {
+        Map<String, String> headers = Map.of(HttpHeaders.AUTHORIZATION.getName(), token.startsWith("Bearer ") ? token : "Bearer " + token);
 
-        RestClientApiResponse response = engine.sendRequest("GET", ApiConstants.URL_BANK_CARD_DATA, null, headers);
+        JsonElement responseJson = engine.get(ApiEmulatorConstants.URL_BANK_CARD_DATA, headers);
 
-        if (response.isSuccessful() && response.getResponseAsJson() != null) {
+        if (responseJson != null) {
             try {
-                JsonElement cardsArray = response.getResponseAsJson()
-                        .getAsJsonObject()
+                JsonElement cardsArray = responseJson.getAsJsonObject()
                         .getAsJsonObject("response")
                         .getAsJsonArray("cards");
 
-                return gson.fromJson(cardsArray, bankCardListType);
+                List<ApiEmulatorBankCard> cards = RestClientApiHelper.castListFromJson(cardsArray, bankCardListType, this.gson);
+
+                if (cards == null) {
+                    log.error("Failed to parse bank cards response: result is null or not an array.");
+                    return Collections.emptyList();
+                }
+                return cards;
             } catch (Exception e) {
                 log.error("Failed to parse bank cards response: unexpected JSON structure.", e);
                 return Collections.emptyList();
             }
         }
 
-        log.error("Failed to get bank cards data. Status: {}", response.getStatus().get("code"));
+        log.error("Failed to get bank cards data.");
         return Collections.emptyList();
     }
 
     public boolean setMockResponse(Map<String, Object> mockResponse) {
-        JsonElement jsonBody = gson.toJsonTree(mockResponse);
+        JsonElement jsonBody = RestClientApiHelper.castToJson(mockResponse);
 
-        RestClientApiResponse response = engine.sendRequest("POST", ApiConstants.URL_BANK_CARD_MOCK_RESPONSE, jsonBody, Collections.emptyMap());
-
-        if (response.isSuccessful()) {
+        if (engine.post(ApiEmulatorConstants.URL_BANK_CARD_MOCK_RESPONSE, jsonBody, Collections.emptyMap()) != null) {
             return true;
         }
 
-        log.error("Failed to set mock response. Status: {}", response.getStatus().get("code"));
+        log.error("Failed to set mock response.");
         return false;
     }
 
     public boolean clearMockResponse() {
-        RestClientApiResponse response = engine.sendRequest("DELETE", ApiConstants.URL_BANK_CARD_MOCK_RESPONSE, null, Collections.emptyMap());
-
-        if (response.isSuccessful()) {
+        if (engine.delete(ApiEmulatorConstants.URL_BANK_CARD_MOCK_RESPONSE)) {
             return true;
         }
 
-        log.error("Failed to clear mock response. Status: {}", response.getStatus().get("code"));
+        log.error("Failed to clear mock response.");
         return false;
     }
 }

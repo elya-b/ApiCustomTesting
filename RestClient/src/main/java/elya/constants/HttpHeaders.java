@@ -2,7 +2,6 @@ package elya.constants;
 
 public enum HttpHeaders {
     AUTHORIZATION("Authorization"),
-
     ;
 
     private final String headerName;
@@ -11,7 +10,7 @@ public enum HttpHeaders {
         this.headerName = headerName;
     }
 
-    public String getHeaderName() {
+    public String getName() {
         return headerName;
     }
 }

@@ -1,27 +1,26 @@
 package elya.json2object;
 
 import com.google.gson.*;
-import elya.ApiBankCard;
 import elya.card.BankCard;
+import elya.objects.ApiEmulatorBankCard;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Type;
 
 @Component
-public class ApiBankCardSerializerDeserializer extends SerializerDeserializerHelper implements JsonDeserializer<ApiBankCard> {
+public class ApiBankCardSerializerDeserializer extends SerializerDeserializerHelper implements JsonDeserializer<ApiEmulatorBankCard> {
 
     private ApiBankCardSerializerDeserializer() {
         super(BankCard.class);
     }
 
-
     @Override
-    public ApiBankCard deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+    public ApiEmulatorBankCard deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
         if (jsonElement == null || jsonElement.isJsonNull() || !jsonElement.isJsonObject())
             return null;
 
         JsonObject object = jsonElement.getAsJsonObject();
-        ApiBankCard bankCard = new ApiBankCard();
+        ApiEmulatorBankCard bankCard = new ApiEmulatorBankCard();
 
         if (isUsable(object, ApiBankCardField.CARD_ID.getFieldName())) {
             bankCard.setCardId(object.get(ApiBankCardField.CARD_ID.getFieldName()).getAsInt());

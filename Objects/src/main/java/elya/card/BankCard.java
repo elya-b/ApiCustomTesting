@@ -2,18 +2,17 @@ package elya.card;
 
 import elya.card.constants.CardType;
 import elya.card.constants.Currency;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
-import java.util.Objects;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
+@EqualsAndHashCode
+@ToString
 public class BankCard {
     private Integer cardId;
     private Integer cardNumber;
@@ -21,69 +20,4 @@ public class BankCard {
     private Boolean cardStatus;
     private Currency currency;
     private BigDecimal balance;
-
-//    public Integer getCardNumber() {
-//        return cardNumber;
-//    }
-//
-//    public void setCardNumber(Integer cardNumber) {
-//        this.cardNumber = cardNumber;
-//    }
-//
-//    public String getCardType() {
-//        return cardType;
-//    }
-//
-//    public void setCardType(String cardType) {
-//        this.cardType = cardType;
-//    }
-//
-//    public Boolean getCardStatus() {
-//        return cardStatus;
-//    }
-//
-//    public void setCardStatus(Boolean cardStatus) {
-//        this.cardStatus = cardStatus;
-//    }
-//
-//    public String getCurrency() {
-//        return currency;
-//    }
-//
-//    public void setCurrency(String currency) {
-//        this.currency = currency;
-//    }
-//
-//    public BigDecimal getBalance() {
-//        return balance;
-//    }
-//
-//    public void setBalance(BigDecimal balance) {
-//        this.balance = balance;
-//    }
-
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        BankCard bankCard = (BankCard) o;
-        return Objects.equals(cardId, bankCard.cardId) && Objects.equals(cardNumber, bankCard.cardNumber) && cardType == bankCard.cardType && Objects.equals(cardStatus, bankCard.cardStatus) && currency == bankCard.currency && Objects.equals(balance, bankCard.balance);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(cardId, cardNumber, cardType, cardStatus, currency, balance);
-    }
-
-    @Override
-    public String toString() {
-        return "BankCard{" +
-                "cardId=" + cardId +
-                ", cardNumber=" + cardNumber +
-                ", cardType=" + cardType +
-                ", cardStatus=" + cardStatus +
-                ", currency=" + currency +
-                ", balance=" + balance +
-                '}';
-    }
 }

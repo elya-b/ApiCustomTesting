@@ -13,12 +13,20 @@ import java.util.Map;
 @EqualsAndHashCode
 @ToString
 public class RestClientApiResponse {
-    private Map<String, String> status;
+    private Map<String, String> statuses;
     private String responseAsString;
     private JsonElement responseAsJson;
     private Map<String, String> headers = new HashMap<>();
 
     public boolean isSuccessful() {
-        return "200".equals(status.get("code"));
+        String codeString = statuses.get("code");
+        if (codeString == null) return false;
+
+        try {
+            int code = Integer.parseInt(codeString);
+            return code >= 200 && code < 300;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 }
