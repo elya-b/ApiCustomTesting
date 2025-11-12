@@ -1,0 +1,21 @@
+package elya.enums;
+
+public enum HttpHeaderValues {
+    BEARER ("Bearer "),
+    APPLICATION_JSON ("application/json");
+
+    private final String httpHeaderValue;
+
+    HttpHeaderValues (String httpHeaderValue) {
+        this.httpHeaderValue = httpHeaderValue;
+    }
+
+    public String getHttpHeaderValue() {
+        return httpHeaderValue;
+    }
+
+    @Override
+    public String toString() {
+        return httpHeaderValue;
+    }
+}
