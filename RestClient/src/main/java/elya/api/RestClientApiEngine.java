@@ -4,10 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import elya.interfaces.ApiEmulatorStatusInfoGenerator;
+import elya.ApiEmulatorStatusesGenerator;
+import elya.constants.HttpMethod;
 import elya.objects.RestClientApiResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
@@ -20,12 +20,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static elya.constants.logs.ErrorLogs.*;
-import static elya.enums.HttpHeaderValues.*;
-import static org.springframework.http.HttpHeaders.*;
-
 @Slf4j
-public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine, ApiEmulatorStatusInfoGenerator {
+public class RestClientApiEngine implements IRestClientApiEngine, ApiEmulatorStatusesGenerator {
     private final HttpClient httpClient;
     private final Gson gson;
     private final String baseUrl;
@@ -47,14 +43,14 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
         headers.forEach(requestBuilder::header);
 
         if (jsonBody != null) {
-            requestBuilder.header(CONTENT_TYPE, APPLICATION_JSON.toString());
+            requestBuilder.header("Content-Type", "application/json");
         }
 
         HttpRequest.BodyPublisher bodyPublisher = jsonBody != null
                 ? HttpRequest.BodyPublishers.ofString(gson.toJson(jsonBody))
                 : HttpRequest.BodyPublishers.noBody();
 
-        requestBuilder.method(method.toString(), bodyPublisher);
+        requestBuilder.method(method.getMethodName(), bodyPublisher);
 
         return executeRequest(requestBuilder.build());
     }
@@ -95,7 +91,7 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
             HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             int statusCode = httpResponse.statusCode();
-            clientResponse.setStatuses(generateHttpStatusInfo(HttpStatus.valueOf(statusCode)));
+            clientResponse.setStatuses(generateHttpStatus(HttpStatus.valueOf(statusCode)));
 
             String body = httpResponse.body();
             clientResponse.setResponseAsString(body);
@@ -113,15 +109,13 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
             }
 
         } catch (IOException | InterruptedException e) {
-            log.error(HTTP_REQUEST_FAILED, request.uri(), e);
+            log.error("HTTP request failed for URL: {}", request.uri(), e);
 
-            clientResponse.setStatuses(
-                            generateHttpStatusInfo(HttpStatus.SERVICE_UNAVAILABLE));
-            clientResponse.setResponseAsString(
-                            e.getMessage());
+            clientResponse.setStatuses(generateHttpStatus(HttpStatus.SERVICE_UNAVAILABLE));
+            clientResponse.setResponseAsString(e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.error(UNKNOWN_HTTP_STATUS_CODE, request.uri(), e.getMessage());
-            clientResponse.setStatuses(generateHttpStatusInfo(HttpStatus.INTERNAL_SERVER_ERROR));
+            log.error("Unknown HTTP status code received for URL: {}. Code: {}", request.uri(), e.getMessage());
+            clientResponse.setStatuses(generateHttpStatus(HttpStatus.INTERNAL_SERVER_ERROR));
         }
 
         return clientResponse;

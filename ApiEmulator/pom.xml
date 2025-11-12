@@ -39,11 +39,6 @@
             <groupId>elya</groupId>
             <artifactId>Properties</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>elya</groupId>
-            <artifactId>HttpSupport</artifactId>
-        </dependency>
     </dependencies>
 
 </project>
