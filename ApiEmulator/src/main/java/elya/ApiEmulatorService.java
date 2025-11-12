@@ -1,10 +1,10 @@
 package elya;
 
+import elya.interfaces.ApiEmulatorStatusInfoGenerator;
 import elya.services.ApiEmulatorCredentialsService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,9 +13,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static elya.constants.logs.ApiErrorLogs.*;
+import static elya.enums.HttpHeaderValues.*;
+import static elya.enums.ResponseModel.*;
+import static org.springframework.http.HttpStatus.*;
+
 @Slf4j
 @Service
-public class ApiEmulatorService implements ApiEmulatorStatusesGenerator {
+public class ApiEmulatorService implements ApiEmulatorStatusInfoGenerator {
     private final Map<String, String> authTokens = new ConcurrentHashMap<>();
     @Autowired
     private ApiEmulatorCredentialsService credentialsService;
@@ -33,8 +38,8 @@ public class ApiEmulatorService implements ApiEmulatorStatusesGenerator {
                 .anyMatch(cred -> login.equals(cred.getLogin()) && password.equals(cred.getPassword()));
 
         if ((login == null) || login.isEmpty() || (password == null) || password.isEmpty() || !credentialsMatch) {
-            log.error("Invalid or missing credentials.");
-            return generateHttpStatus(HttpStatus.UNAUTHORIZED);
+            log.error(INVALID_OR_MISSING_CREDENTIALS);
+            return generateHttpStatusInfo(UNAUTHORIZED);
         }
 
         String authToken = UUID.randomUUID().toString();
@@ -44,7 +49,7 @@ public class ApiEmulatorService implements ApiEmulatorStatusesGenerator {
     }
 
     protected boolean validateAuthToken(String token) {
-        if (token == null || !token.startsWith("Bearer ")) return false;
+        if (token == null || !token.startsWith(BEARER.toString())) return false;
 
         String generatedToken = token.substring(7);
         return authTokens.containsValue(generatedToken);
@@ -52,7 +57,7 @@ public class ApiEmulatorService implements ApiEmulatorStatusesGenerator {
 
     public Map<String, Object> getApiBankCards(String token) {
         if (!validateAuthToken(token)) {
-            generateHttpStatus(HttpStatus.UNAUTHORIZED);
+            generateHttpStatusInfo(UNAUTHORIZED);
         }
 
         if (mockedResponse != null) {
@@ -61,9 +66,9 @@ public class ApiEmulatorService implements ApiEmulatorStatusesGenerator {
             List<Map<String, String>> cards = new ArrayList<>();
             return
                     Map.of(
-                            "response", Map.of(
-                                    "size", 0,
-                                    "cards", cards
+                            RESPONSE.toString(), Map.of(
+                                    SIZE.toString(), 0,
+                                    CARDS.toString(), cards
                             )
                     );
         }
