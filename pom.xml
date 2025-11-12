@@ -23,7 +23,6 @@
         <module>RestClient</module>
         <module>Execution</module>
         <module>Properties</module>
-        <module>HttpSupport</module>
     </modules>
 
     <dependencyManagement>
@@ -49,12 +48,6 @@
             <dependency>
                 <groupId>elya</groupId>
                 <artifactId>RestClient</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>elya</groupId>
-                <artifactId>HttpSupport</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
