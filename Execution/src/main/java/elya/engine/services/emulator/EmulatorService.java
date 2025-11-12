@@ -6,20 +6,12 @@ import elya.ApiEmulator;
 import elya.ApiEmulatorService;
 import elya.objects.ApiEmulatorBankCard;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static elya.engine.services.constants.ErrorLogs.*;
-import static elya.engine.services.constants.Exceptions.*;
-import static elya.enums.HttpHeaderValues.*;
-import static elya.enums.ResponseModel.*;
-import static org.springframework.http.HttpStatus.*;
-
-@Slf4j
 public class EmulatorService {
     private final String host;
     private final int port;
@@ -48,7 +40,7 @@ public class EmulatorService {
         generateToken(login, password);
 
         } catch (InterruptedException e) {
-            log.error(LONG_TIME_WAITING_EMULATOR_START + e.getMessage());
+            System.out.println("Emulator starting is stopped because of lon time waiting: " + e.getMessage());
             Thread.currentThread().interrupt();
             stop();
         }
@@ -63,8 +55,8 @@ public class EmulatorService {
     private void generateToken(String login, String password) {
         Map<String, String> authTokenResponse = service.generateAuthToken(login, password);
 
-        if (authTokenResponse != null && authTokenResponse.containsKey(UNAUTHORIZED.getReasonPhrase())) {
-            throw new IllegalStateException(FAILED_TO_GENERATE_AUTH_TOKEN);
+        if (authTokenResponse != null && authTokenResponse.containsKey("error")) {
+            throw new IllegalStateException("Failed to generate auth token");
         }
 
         this.authToken = authTokenResponse.get(login);
@@ -74,14 +66,14 @@ public class EmulatorService {
         ObjectMapper objectMapper = new ObjectMapper();
         List<ApiEmulatorBankCard> bankCards;
 
-        Map<String, Object> response = service.getApiBankCards(BEARER + authToken);
-        Map<String, Object> responseData = (Map<String, Object>) response.get(RESPONSE.toString());
+        Map<String, Object> response = service.getApiBankCards("Bearer " + authToken);
+        Map<String, Object> responseData = (Map<String, Object>) response.get("response");
 
         if (responseData == null) {
             return Collections.emptyList();
         }
 
-        Object cards = responseData.get(CARDS.toString());
+        Object cards = responseData.get("cards");
 
         bankCards = cards != null ?
                 objectMapper.convertValue(cards, new TypeReference<>() {}) : Collections.emptyList();
