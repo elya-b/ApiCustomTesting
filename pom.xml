@@ -14,47 +14,53 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.30</lombok.version>
-        <spring-boot.version>3.3.1</spring-boot.version>
+        <spring-boot.version>3.5.7</spring-boot.version>
     </properties>
 
     <modules>
-        <module>ApiEmulator</module>
-        <module>Objects</module>
-        <module>RestClient</module>
-        <module>Execution</module>
-        <module>Properties</module>
-        <module>HttpSupport</module>
+        <module>api-emulator</module>
+        <module>domain-objects</module>
+        <module>rest-client</module>
+        <module>test-framework</module>
+        <module>properties</module>
+        <module>http-support</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>elya</groupId>
-                <artifactId>ApiEmulator</artifactId>
+                <artifactId>api-emulator</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>elya</groupId>
-                <artifactId>Objects</artifactId>
+                <artifactId>domain-objects</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>elya</groupId>
-                <artifactId>Properties</artifactId>
+                <artifactId>rest-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>elya</groupId>
-                <artifactId>RestClient</artifactId>
+                <artifactId>properties</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>elya</groupId>
-                <artifactId>HttpSupport</artifactId>
+                <artifactId>http-support</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>elya</groupId>
+                <artifactId>api-contracts</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
