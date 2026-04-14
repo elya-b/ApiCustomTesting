@@ -1,58 +1,160 @@
 package elya;
 
+import elya.dto.auth.AuthRequest;
+import elya.dto.auth.AuthResponse;
+import elya.dto.bankcard.BankCardListRequest;
+import elya.dto.bankcard.BankCardListResponse;
+import elya.emulator.constants.excpetions.TokenValidationException;
+import elya.services.AuthenticationService;
+import elya.services.MockService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-import static elya.emulator.constants.messages.ResponseMessages.*;
-import static elya.general.constants.ApiEndpoints.*;
-import static elya.general.enums.JsonProperty.*;
-import static elya.general.enums.StatusInfo.*;
-import static org.springframework.http.HttpStatus.*;
+import static elya.constants.ApiEndpoints.*;
+import static elya.emulator.constants.messages.ResponseMessages.MOCK_CLEARED;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
+/**
+ * REST controller for the bank card emulator.
+ * Provides endpoints to manage mock data, perform authentication,
+ * and simulate bank card API responses.
+ */
+@Tag(name = "Bank Card Emulator", description = "Operations for managing mocked bank card responses")
 @RestController
 @RequiredArgsConstructor
 public class ApiEmulatorController {
-    private final ApiEmulatorService service;
+    private final AuthenticationService authService;
+    private final MockService mockService;
 
-    @PostMapping(URL_TOKEN)
-    public ResponseEntity<Map<String, String>> generateAuthToken(@RequestBody Map<String, String> request) {
-        String login = request.get(LOGIN.toString());
-        String password = request.get(PASSWORD.toString());
+    /**
+     * Authenticates a user and generates a new session token.
+     *
+     * @param request login credentials including username and password
+     * @return        ResponseEntity containing the AuthResponse with session token
+     */
+    @Operation(
+            summary = "Generate Auth Token",
+            description = "Authenticates user credentials and returns a session token"
+    )
+    @ApiResponse(responseCode = "200", description = "Token generated successfully")
+    @PostMapping(value = URL_TOKEN, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<AuthResponse> generateAuthToken(@Valid @RequestBody AuthRequest request) {
 
-        Map<String, String> response = service.generateAuthToken(login, password);
+        return ResponseEntity.ok(authService.generateAuthToken(request));
+    }
 
-        if (UNAUTHORIZED.value() == Integer.parseInt(response.get(STATUS.toString()))) {
-            return ResponseEntity.status(UNAUTHORIZED).body(response);
-        }
+    /**
+     * Sets or updates the mock card data for the current session.
+     *
+     * @param token   Authorization header containing the session token
+     * @param request list of cards to be set in the mock response
+     * @return        ResponseEntity containing the newly set BankCardListResponse
+     */
+    @Operation(summary = "Set Mock Response")
+    @PostMapping(URL_BANK_CARD_MOCK)
+    public ResponseEntity<BankCardListResponse> setMockResponse(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token,
+                                                                @Valid @RequestBody BankCardListRequest request) {
+        String cleanToken = extractToken(token);
+        BankCardListResponse response = mockService.setMockResponse(cleanToken, request);
 
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping(URL_BANK_CARD_MOCK_RESPONSE)
-    public ResponseEntity<String> setMockResponse(@RequestBody Map<String, Object> mockResponse) {
-        service.setMockedResponse(mockResponse);
+    /**
+     * Removes the entire custom mock response for the current session.
+     *
+     * @param token Authorization header containing the session token
+     * @return      ResponseEntity with a success message
+     */
+    @Operation(
+            summary = "Clear Mock Response",
+            description = "Removes the custom mock response associated with the current session token")
+    @ApiResponse(responseCode = "200", description = "Mock data cleared successfully")
+    @DeleteMapping(URL_BANK_CARD_MOCK)
+        public ResponseEntity<Map<String, Object>> clearMockResponse(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token) {
 
-        return ResponseEntity.ok(MOCK_SET);
+        boolean isCleared = mockService.clearMockResponse(extractToken(token));
+
+        return ResponseEntity.ok(Map.of(
+                "result", isCleared,
+                "message", MOCK_CLEARED
+        ));
     }
 
-    @DeleteMapping(URL_BANK_CARD_MOCK_RESPONSE)
-    public ResponseEntity<String> clearMockResponse() {
-        service.clearMockedResponse();
+    /**
+     * Deletes a specific bank card from the mock by its unique identifier.
+     *
+     * @param token  Authorization header containing the session token
+     * @param cardId unique identifier of the card to be deleted
+     * @return       ResponseEntity containing the ID of the deleted card or 404 if not found
+     */
+    @Operation(
+            summary = "Delete Specific Mock Card",
+            description = "Removes a single card by its ID and returns the ID of the deleted card")
+    @ApiResponse(
+            responseCode = "200", description = "Card deleted successfully")
+    @ApiResponse(
+            responseCode = "404", description = "Card not found")
+    @DeleteMapping(
+            value = URL_BANK_CARD_DATA_ID,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> deleteBankCardById(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token,
+                                                @PathVariable(name = "cardId") Long cardId) {
 
-        return ResponseEntity.ok(MOCK_CLEARED);
+        return mockService.deleteApiBankCardById(extractToken(token), cardId)
+                .map(id -> ResponseEntity.ok(Map.of("cardId", id)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping(URL_BANK_CARD_DATA)
-    public ResponseEntity<Map<String, Object>> getApiBankCards(@RequestHeader String token) {
-        Map<String, Object> response = service.getApiBankCards(token);
+    /**
+     * Retrieves either all mocked bank cards or a specific card by its identifier.
+     * Supports optional path variable for granular data retrieval.
+     *
+     * @param token  Authorization token
+     * @param cardId optional unique identifier of the card
+     * @return       BankCardListResponse or a single BankCardResponse
+     */
+    @Operation(
+            summary = "Get Bank Cards",
+            description = "Returns all cards or a specific one if cardId is provided")
+    @GetMapping(
+            value = {URL_BANK_CARD_DATA, URL_BANK_CARD_DATA_ID},
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getBankCards(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token,
+                                          @PathVariable(name = "cardId", required = false) Long cardId) {
 
-        if (UNAUTHORIZED.value() == ((Number) response.getOrDefault(STATUS.toString(), 0)).intValue()) {
-            return ResponseEntity.status(UNAUTHORIZED).body(response);
+        String cleanToken = extractToken(token);
+
+        if (cardId != null) {
+            return mockService.getApiBankCardById(cleanToken, cardId)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
         }
 
-        return ResponseEntity.ok(response);
+        BankCardListResponse allCards = mockService.getApiBankCards(cleanToken);
+        return ResponseEntity.ok(allCards);
+    }
+
+    /**
+     * Extracts the raw token string from the Authorization header.
+     * Uses case-insensitive prefix check for maximum reliability.
+     *
+     * @param header full Authorization header value
+     * @return       cleaned token string
+     */
+    public String extractToken(String header) {
+        if (header == null || !header.startsWith("Bearer ")) {
+            throw new TokenValidationException("Invalid Authorization header format");
+        }
+        return header.substring(7);
     }
 }

@@ -1,12 +1,11 @@
 package elya.card.constants;
 
-import java.util.Arrays;
-import java.util.Optional;
+import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum Currency {
+public enum Currency implements Identifiable, Nameable {
     USD("USD", 0),
     EUR("EUR", 1),
-    GPB("GPB", 2),
+    JPY("JPY", 2),
     ;
 
     private final String currencySymbol;
@@ -17,23 +16,14 @@ public enum Currency {
         this.currencyId = currencyId;
     }
 
-    public String getCurrencySymbol() {
-        return currencySymbol;
-    }
-
-    public int getCurrencyId() {
+    @Override
+    public int getId() {
         return currencyId;
     }
 
-    public static Optional<Currency> getByCurrencySymbol(String currencySymbol) {
-        return Arrays.stream(Currency.values())
-                .filter(currency -> currency.currencySymbol.equals(currencySymbol))
-                .findFirst();
-    }
-
-    public static Optional<Currency> getById(int currencyId) {
-        return Arrays.stream(Currency.values())
-                .filter(currency -> currency.currencyId == currencyId)
-                .findFirst();
+    @Override
+    @JsonValue
+    public String getName() {
+        return currencySymbol;
     }
 }

@@ -1,0 +1,39 @@
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: never
+
+spring:
+  profiles:
+    active: ${SPRING_PROFILE:dev}
+
+api:
+  credentials:
+    users:
+      - login: "admin"
+        password: "admin"
+        role: "ADMIN" # full accessibility
+      - login: "qa"
+        password: "qa"
+        role: "QA" # read only
+
+  token:
+    expiration: 3600 # token lifetime is 1 Hour
+    issuer: ${TOKEN_ISSUER:api-emulator}
+
+management:
+  # Actuator Endpoints Configuration
+  endpoints:
+    web:
+      exposure:
+        # Specifies which endpoints should be accessible via HTTP
+        # Example URLs:
+        # http://localhost:PORT/actuator/health  -> Check application status
+        # http://localhost:PORT/actuator/env     -> View environment properties
+        # http://localhost:PORT/actuator/loggers -> Manage logging levels
+        include: "health,info,env,loggers"
+  endpoint:
+    health:
+      # Show detailed health information (disk space, ping, etc.)
+      show-details: always

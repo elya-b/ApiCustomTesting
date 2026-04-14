@@ -1,0 +1,16 @@
+mock:
+  storage:
+    path: target/test-data/mock_response.json
+session:
+  storage:
+    path: target/test-data/session.json
+
+api:
+  credentials:
+    users:
+      - login: "admin_user"
+        password: "admin_password"
+        role: "ADMIN"
+      - login: "test_user"
+        password: "test_password"
+        role: "USER"

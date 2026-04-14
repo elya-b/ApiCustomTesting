@@ -3,29 +3,15 @@ package elya;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+
+import java.util.Collections;
 
 @Slf4j
-@SpringBootApplication(
-        exclude = {
-                MongoAutoConfiguration.class,
-                MongoDataAutoConfiguration.class,
-                LiquibaseAutoConfiguration.class,
-                DataSourceAutoConfiguration.class,
-                HibernateJpaAutoConfiguration.class,
-                SecurityAutoConfiguration.class,
-                OAuth2ClientAutoConfiguration.class
-        }
-)
+@SpringBootApplication(scanBasePackages = "elya") // scans all project modules starting with 'elya' to register controllers and handlers for proper error processing
 public class ApiEmulator {
-
     public static void main(String[] args) {
-        SpringApplication.run(ApiEmulator.class, args);
+        SpringApplication app = new SpringApplication(ApiEmulator.class);
+        app.setDefaultProperties(Collections.singletonMap("server.port", "0"));
+        app.run(args);
     }
 }

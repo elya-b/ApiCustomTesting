@@ -1,103 +1,112 @@
 package elya.api;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
-import elya.RestClientApiHelper;
-import elya.emulator.objects.ApiEmulatorBankCard;
-import elya.json2object.ApiBankCardSerializerDeserializer;
-import elya.restclient.objects.token.Token;
+import elya.apicontracts.IAuthApi;
+import elya.apicontracts.IBankCardApi;
+import elya.apicontracts.IMockControlApi;
+import elya.authentication.Token;
+import elya.card.BankCard;
+import elya.dto.auth.AuthRequest;
+import elya.dto.auth.AuthResponse;
+import elya.dto.bankcard.BankCardListRequest;
+import elya.dto.bankcard.BankCardListResponse;
+import elya.dto.bankcard.BankCardRequest;
+import elya.dto.bankcard.BankCardResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Type;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
-import static elya.general.constants.ApiEndpoints.*;
-import static elya.constants.logs.ErrorLogs.*;
-import static elya.general.enums.HttpHeaderValues.*;
-import static elya.general.enums.JsonProperty.*;
-import static elya.general.enums.responsemodel.ApiBankCards.*;
-import static org.springframework.http.HttpHeaders.*;
-
+/**
+ * Facade class providing a single entry point for all bank-related API operations.
+ * Coordinates between specialized clients for authentication, card data, and mocks.
+ */
 @Slf4j
+@Component
+@RequiredArgsConstructor
 public class RestClientApi {
+    private final IAuthApi authClient;
+    private final IBankCardApi cardClient;
+    private final IMockControlApi mockClient;
 
-    private final IRestClientApi engine;
-    private final Gson gson;
-    private final Type bankCardListType = new TypeToken<List<ApiEmulatorBankCard>>() {}.getType();
-
-    public RestClientApi(IRestClientApi engine, ApiBankCardSerializerDeserializer cardDeserializer) {
-        this.engine = engine;
-        this.gson = new GsonBuilder()
-                .registerTypeAdapter(ApiEmulatorBankCard.class, cardDeserializer)
-                .create();
+    public Token generateAuthToken(AuthRequest authRequest) {
+        AuthResponse response = authClient.generateAuthToken(authRequest);
+        return response.toDomain();
     }
 
-    public Token generateAuthToken(String login, String password) {
-        JsonObject body = new JsonObject();
-        body.addProperty(LOGIN.toString(), login);
-        body.addProperty(PASSWORD.toString(), password);
+    /**
+     * Retrieves a specific bank card by its ID through the specialized card client.
+     *
+     * @param token  authentication bearer token
+     * @param cardId unique identifier of the bank card
+     * @return       Optional containing the BankCardResponse if found
+     */
+    public BankCard getApiBankCardById(String token, Long cardId) {
+        Optional<BankCardResponse> response = cardClient.getApiBankCardById(token, cardId);
 
-        JsonElement responseJson = engine.post(URL_TOKEN, body, Collections.emptyMap());
-
-        if (responseJson != null) {
-            return RestClientApiHelper.castFromJson(responseJson, Token.class);
-        }
-
-        log.error(FAILED_TO_GENERATE_TOKEN);
-        return null;
+        return response
+                .map(BankCardResponse::getBankCard)
+                .orElseThrow(() -> new RuntimeException("Card not found with ID: " + cardId));
     }
 
-    public List<ApiEmulatorBankCard> getApiBankCards(String token) {
-        Map<String, String> headers = Map.of(
-                AUTHORIZATION, token.startsWith(BEARER.toString()) ? token : BEARER + token);
+    /**
+     * Retrieves all bank cards associated with the provided authorization token.
+     *
+     * @param token authentication bearer token
+     * @return      list of BankCardResponse objects
+     */
+    public List<BankCard> getApiBankCards(String token) {
+        BankCardListResponse response = cardClient.getApiBankCards(token);
 
-        JsonElement responseJson = engine.get(URL_BANK_CARD_DATA, headers);
-
-        if (responseJson != null) {
-            try {
-                JsonElement cardsArray = responseJson.getAsJsonObject()
-                        .getAsJsonObject(RESPONSE.toString())
-                        .getAsJsonArray(CARDS.toString());
-
-                List<ApiEmulatorBankCard> cards = RestClientApiHelper.castListFromJson(cardsArray, bankCardListType, this.gson);
-
-                if (cards == null) {
-                    log.error(FAILED_TO_PARSE_BANK_CARDS_RESPONSE_NULL_OR_NOT_ARRAY);
-                    return Collections.emptyList();
-                }
-                return cards;
-            } catch (Exception e) {
-                log.error(FAILED_TO_GENERATE_TOKEN_UNEXPECTED_JSON, e);
-                return Collections.emptyList();
-            }
+        if (response == null || response.getResponse() == null) {
+            return List.of();
         }
 
-        log.error(FAILED_TO_GET_BANK_CARDS_DATA);
-        return Collections.emptyList();
+        return response.getResponse().getCards().stream()
+                .map(BankCardResponse::getBankCard)
+                .toList();
     }
 
-    public boolean setMockResponse(Map<String, Object> mockResponse) {
-        JsonElement jsonBody = RestClientApiHelper.castToJson(mockResponse);
+    /**
+     * Updates the mock response through the specialized mock client.
+     * Uses the simplified request DTO.
+     *
+     * @param token   authorization session token
+     * @param request simplified mock data request
+     * @return        true if the operation was successful
+     */
+    public List<BankCard> setMockResponse(String token, List<BankCard> request) {
+        List<BankCardRequest> dtoList = request.stream()
+                .map(BankCardRequest::fromDomain)
+                .toList();
+        BankCardListRequest finalRequest = BankCardListRequest.of(dtoList);
 
-        if (engine.post(URL_BANK_CARD_MOCK_RESPONSE, jsonBody, Collections.emptyMap()) != null) {
-            return true;
-        }
+        BankCardListResponse response = mockClient.setMockResponse(token, finalRequest);
 
-        log.error(FAILED_TO_SET_MOCK_RESPONSE);
-        return false;
+        return response.toDomainList();
     }
 
-    public boolean clearMockResponse() {
-        if (engine.delete(URL_BANK_CARD_MOCK_RESPONSE)) {
-            return true;
-        }
+    /**
+     * Clears the mock response for the specified session.
+     *
+     * @param token authorization session token
+     * @return      true if the mock was cleared
+     */
+    public boolean clearMockResponse(String token) {
+        return mockClient.clearMockResponse(token);
+    }
 
-        log.error(FAILED_TO_CLEAR_MOCK_RESPONSE);
-        return false;
+    /**
+     * Deletes a specific bank card from the mock response by its ID.
+     *
+     * @param token  authorization session token
+     * @param cardId unique identifier of the card to be removed
+     * @return       Optional containing the deleted card's ID if successful
+     */
+    public Long deleteApiBankCardById(String token, Long cardId) {
+
+        return mockClient.deleteApiBankCardById(token, cardId)
+                .orElseThrow(() -> new RuntimeException("Can not delete card with ID: " + cardId));
     }
 }
