@@ -86,8 +86,8 @@ public class RestClientApi {
     /**
      * Fully resets the mock data for the current session.
      */
-    public boolean clearMockResponse(String token) {
-        return mockClient.clearMockResponse(token);
+    public boolean isResponseClear(String token) {
+        return mockClient.isResponseClear(token);
     }
 
     /**

@@ -70,7 +70,7 @@ public class MockClient implements IMockControlApi {
      * @return {@code true} if the server confirms the deletion; {@code false} otherwise.
      */
     @Override
-    public boolean clearMockResponse(String token) {
+    public boolean isResponseClear(String token) {
         Map<String, String> headers = createHeaders(token);
 
         try {

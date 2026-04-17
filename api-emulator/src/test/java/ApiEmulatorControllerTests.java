@@ -140,7 +140,7 @@ public class ApiEmulatorControllerTests {
     @DisplayName("DELETE " + URL_BANK_CARD_DATA + " - Success")
     void clearMockResponse_ShouldReturn200() throws Exception {
 
-        when(mockService.clearMockResponse(CLEAN_TOKEN)).thenReturn(true);
+        when(mockService.isResponseClear(CLEAN_TOKEN)).thenReturn(true);
 
         mockMvc.perform(delete(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN))

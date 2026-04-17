@@ -87,7 +87,7 @@ public class ApiEmulatorController {
     @ApiResponse(responseCode = "200", description = "Mock storage cleared successfully")
     @DeleteMapping(value = URL_BANK_CARD_DATA, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> clearMockResponse(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token) {
-        boolean isCleared = mockService.clearMockResponse(extractToken(token));
+        boolean isCleared = mockService.isResponseClear(extractToken(token));
         return ResponseEntity.ok(Map.of(
                 "result", isCleared,
                 "message", MOCK_CLEARED

@@ -145,7 +145,7 @@ public class MockServiceTests {
     void clearMockResponse_Success() {
         when(mockRepository.clear(TOKEN)).thenReturn(true);
 
-        boolean result = mockService.clearMockResponse(TOKEN);
+        boolean result = mockService.isResponseClear(TOKEN);
 
         assertTrue(result, "Mock response was cleared");
         verify(mockRepository).clear(TOKEN);
@@ -156,7 +156,7 @@ public class MockServiceTests {
     void clearMockResponse_Failed() {
         when(mockRepository.clear(TOKEN)).thenReturn(false);
 
-        boolean result = mockService.clearMockResponse(TOKEN);
+        boolean result = mockService.isResponseClear(TOKEN);
 
         assertFalse(result, "Service should return false if repository failed to clear");
         verify(mockRepository).clear(TOKEN);

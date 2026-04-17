@@ -94,7 +94,7 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
      * @return      true if the record was found and successfully cleared from storage
      */
     @Override
-    public boolean clearMockResponse(String token) {
+    public boolean isResponseClear(String token) {
         log.info(CLEARING_MOCK_RESPONSE_FOR_TOKEN, token);
         return mockRepository.clear(token);
     }

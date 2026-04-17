@@ -117,7 +117,7 @@ public class MockClientTests {
     void clearMockResponse_ShouldReturnTrue() {
         when(clientApi.delete(anyString(), anyMap())).thenReturn(true);
 
-        var result = mockClient.clearMockResponse(TOKEN);
+        var result = mockClient.isResponseClear(TOKEN);
 
         assertTrue(result);
         verify(clientApi).delete(eq(URL_BANK_CARD_DATA), anyMap());
@@ -128,7 +128,7 @@ public class MockClientTests {
     void clearMockResponse_ShouldReturnFalse_WhenDeletionFails() {
         when(clientApi.delete(anyString(), anyMap())).thenReturn(false);
 
-        var result = mockClient.clearMockResponse(TOKEN);
+        var result = mockClient.isResponseClear(TOKEN);
 
         assertFalse(result);
         verify(clientApi).delete(eq(URL_BANK_CARD_DATA), anyMap());
@@ -141,7 +141,7 @@ public class MockClientTests {
     void clearMockResponse_ShouldReturnFalse_WhenClientApiThrows() {
         when(clientApi.delete(anyString(), anyMap())).thenThrow(new RuntimeException("network error"));
 
-        var result = mockClient.clearMockResponse(TOKEN);
+        var result = mockClient.isResponseClear(TOKEN);
 
         assertFalse(result, "Exception in clientApi must be caught and return false");
     }
