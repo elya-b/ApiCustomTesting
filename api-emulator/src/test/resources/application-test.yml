@@ -14,3 +14,7 @@ api:
       - login: "test_user"
         password: "test_password"
         role: "USER"
+
+    token:
+      expiration: 3600
+      issuer: api-emulator

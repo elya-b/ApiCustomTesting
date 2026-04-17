@@ -12,16 +12,29 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Data Transfer Object for the root bank card list response.
+ * Root Data Transfer Object for bank card list responses.
+ * <p>Wraps the card collection into a "response" container to match the legacy API schema.
+ * Provides utility methods for bulk conversion and safe instance creation.</p>
  */
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class BankCardListResponse {
+
+    /**
+     * Inner container holding the card collection and associated metadata.
+     */
     @JsonProperty("response")
     private ResponseContainer response;
 
+    /**
+     * Static factory method to create a response from a list of card DTOs.
+     * Ensures the internal collection is mutable and correctly calculates the total size.
+     *
+     * @param cards the list of {@link BankCardResponse} objects.
+     * @return a fully initialized {@link BankCardListResponse}.
+     */
     public static BankCardListResponse of(List<BankCardResponse> cards) {
         List<BankCardResponse> mutableCards = (cards != null) ? new ArrayList<>(cards) : new ArrayList<>();
         return BankCardListResponse.builder()
@@ -32,6 +45,11 @@ public class BankCardListResponse {
                 .build();
     }
 
+    /**
+     * Converts the nested DTO collection into a list of internal domain models.
+     *
+     * @return a list of {@link BankCard} domain objects; returns an empty list if response is null.
+     */
     public List<BankCard> toDomainList() {
         if (this.response == null || this.response.getCards() == null) {
             return Collections.emptyList();
@@ -42,16 +60,24 @@ public class BankCardListResponse {
     }
 
     /**
-     * Inner container holding the actual list of bank cards and metadata.
+     * Inner container representing the JSON "response" object.
+     * Encapsulates the actual data list and its count for client-side pagination or verification.
      */
     @Getter
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ResponseContainer {
+
+        /**
+         * The total number of cards included in the current response.
+         */
         @JsonProperty("size")
         private Integer size;
 
+        /**
+         * The collection of detailed bank card information.
+         */
         @JsonProperty("cards")
         private List<BankCardResponse> cards;
     }

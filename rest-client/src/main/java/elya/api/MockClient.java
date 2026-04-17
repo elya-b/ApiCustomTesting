@@ -6,22 +6,22 @@ import elya.apicontracts.IMockControlApi;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.interfaces.IRestClientApi;
+import elya.restclient.constants.logs.RestClientException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Optional;
 
-import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
-import static elya.constants.ApiEndpoints.URL_BANK_CARD_MOCK;
-import static elya.constants.enums.HttpHeaderValues.BEARER;
-import static elya.restclient.constants.logs.ErrorLogs.FAILED_TO_CLEAR_MOCK_RESPONSE;
-import static elya.restclient.constants.logs.ErrorLogs.FAILED_TO_SET_MOCK_RESPONSE;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static elya.constants.ApiEndpoints.*;
+import static elya.constants.enums.HttpHeaderValues.*;
+import static elya.restclient.constants.logs.ErrorLogs.*;
+import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Implementation of the mock control API client.
- * Provides administrative methods to configure or clear server-side mock responses.
+ * <p>Provides administrative methods to dynamically configure, clear,
+ * or partially update server-side mock responses during runtime.</p>
  */
 @Slf4j
 @Component
@@ -31,54 +31,55 @@ public class MockClient implements IMockControlApi {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Initializes the MockControlClient with a REST API execution engine.
+     * Constructs the client with a specific REST engine.
      *
-     * @param clientApi the low-level API client used for executing HTTP requests
+     * @param clientApi the {@link IRestClientApi} implementation for HTTP calls.
      */
     public MockClient(IRestClientApi clientApi) {
         this.clientApi = clientApi;
     }
 
     /**
-     * Configures a mock response on the server using simplified request data.
+     * Configures a custom mock response on the server.
+     * <p>Sends a list of cards to be stored in the emulator's volatile storage for the current session.</p>
      *
-     * @param token   authorization session token
-     * @param request simplified bank card mock data
-     * @return        true if the mock was successfully set
+     * @param token   the security token.
+     * @param request the collection of cards to mock.
+     * @return the confirmed {@link BankCardListResponse} from the server.
+     * @throws RestClientException if serialization or transmission fails.
      */
     @Override
     public BankCardListResponse setMockResponse(String token, BankCardListRequest request) {
         JsonNode jsonBody = objectMapper.valueToTree(request);
-        Map<String, String> headers = Map.of(AUTHORIZATION, BEARER + token);
+        Map<String, String> headers = createHeaders(token);
 
-        JsonNode response = clientApi.post(URL_BANK_CARD_MOCK, jsonBody, headers);
+        JsonNode response = clientApi.post(URL_BANK_CARD_DATA, jsonBody, headers);
 
         try {
             return objectMapper.treeToValue(response, BankCardListResponse.class);
         } catch (Exception e) {
             log.error(FAILED_TO_SET_MOCK_RESPONSE, e);
-            throw new RuntimeException("Can not deserialize mock");
+            throw new RestClientException("Failed to deserialize mock response configuration", e);
         }
     }
 
     /**
-     * Clears all configured mock responses for the current session.
+     * Resets the emulator state by clearing all mocked data for the session.
      *
-     * @param token authorization session token
-     * @return      true if the mock data was cleared successfully
+     * @param token the security token.
+     * @return {@code true} if the server confirms the deletion; {@code false} otherwise.
      */
     @Override
     public boolean clearMockResponse(String token) {
         Map<String, String> headers = createHeaders(token);
 
         try {
-            if (clientApi.delete(URL_BANK_CARD_MOCK, headers)) {
-                log.info("Mock response cleared successfully via API");
+            if (clientApi.delete(URL_BANK_CARD_DATA, headers)) {
+                log.info("Mock response state cleared successfully.");
                 return true;
             }
         } catch (Exception e) {
-            log.error("Technical error during clearing mock: {}", e.getMessage());
-            return false;
+            log.error("Technical error during mock clearing: {}", e.getMessage());
         }
 
         log.error(FAILED_TO_CLEAR_MOCK_RESPONSE);
@@ -86,11 +87,11 @@ public class MockClient implements IMockControlApi {
     }
 
     /**
-     * Removes a specific bank card from the mock response by its ID.
+     * Deletes a specific card from the mocked set.
      *
-     * @param token  authorization session token
-     * @param cardId unique identifier of the card to be removed
-     * @return       Optional containing the deleted card's ID if successful, otherwise empty
+     * @param token  the security token.
+     * @param cardId the unique ID of the card to remove.
+     * @return an {@link Optional} with the deleted ID if successful, empty otherwise.
      */
     @Override
     public Optional<Long> deleteApiBankCardById(String token, Long cardId) {
@@ -107,12 +108,13 @@ public class MockClient implements IMockControlApi {
     }
 
     /**
-     * Helper method to create authorization headers.
+     * Helper to create standard Authorization headers.
      *
-     * @param token raw token string
-     * @return      map containing the Authorization header
+     * @param token the raw token string.
+     * @return a map with the "Bearer <token>" header.
      */
     private Map<String, String> createHeaders(String token) {
-        return Map.of(AUTHORIZATION, BEARER + token);
+        String authHeader = token.startsWith(BEARER.toString()) ? token : BEARER + token;
+        return Map.of(AUTHORIZATION, authHeader);
     }
 }

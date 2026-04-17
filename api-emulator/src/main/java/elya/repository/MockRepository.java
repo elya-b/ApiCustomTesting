@@ -14,9 +14,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static elya.emulator.constants.logs.ApiErrorLogs.*;
+import static elya.emulator.constants.logs.ApiInfoLogs.*;
+import static elya.emulator.constants.logs.ApiWarnLogs.*;
+
 /**
  * Repository for managing persistent mock responses.
- * Survives application restarts by saving data to a JSON file.
+ * Provides thread-safe in-memory storage with file-based persistence
+ * to survive application restarts.
  */
 @Slf4j
 @Component
@@ -25,10 +30,19 @@ public class MockRepository {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, BankCardListResponse> mockedResponses = new ConcurrentHashMap<>();
 
+    /**
+     * Initializes the repository with a configurable storage path.
+     * * @param storagePath path to the JSON file where mock data is persisted.
+     * Defaults to 'mock_response.json' if not provided via properties.
+     */
     public MockRepository(@Value("${mock.storage.path:mock_response.json}") String storagePath) {
         this.storagePath = storagePath;
     }
 
+    /**
+     * Loads existing mock data from the persistence storage into memory during startup.
+     * If the file does not exist, the repository starts with an empty state.
+     */
     @PostConstruct
     public void init() {
         File file = new File(storagePath);
@@ -37,28 +51,28 @@ public class MockRepository {
                 Map<String, BankCardListResponse> loaded = objectMapper.readValue(file,
                         new TypeReference<ConcurrentHashMap<String, BankCardListResponse>>() {});
                 mockedResponses.putAll(loaded);
-                log.info("Loaded mocked response from persistence storage.");
+                log.info(LOADED_MOCKED_RESPONSE_FROM_STORAGE);
             } catch (IOException e) {
-                log.error("Failed to load mock from file", e);
+                log.error(FAILED_LOAD_MOCK_FROM_FILE, e);
             }
         }
     }
 
     /**
-     * Persists the bank card response in memory and updates the physical storage.
+     * Persists the bank card response in memory and updates the physical storage file.
      *
-     * @param token    unique session identifier
-     * @param response fully formed response object with metadata
-     * @return         true if operation completed without errors
+     * @param token    unique session identifier associated with the mock data
+     * @param response fully formed response object containing card data and metadata
+     * @return         true if the data was successfully saved to both memory and file
      */
     public boolean save(String token, BankCardListResponse response) {
         try {
-            log.info("Persisting mock data to storage for token: [{}]", token);
+            log.info(PERSISTING_MOCK_DATA_TO_STORAGE_FOR_TOKEN, token);
             mockedResponses.put(token, response);
             saveToFile();
             return true;
         } catch (Exception e) {
-            log.error("Critical error during mock persistence for token: {}", token, e);
+            log.error(ERROR_DURING_MOCK_PERSISTENCE_FOR_TOKEN, token, e);
             return false;
         }
     }
@@ -66,18 +80,20 @@ public class MockRepository {
     /**
      * Finds the mocked response associated with the given token.
      *
-     * @param token session token
-     * @return      Optional containing the response if found
+     * @param token unique session identifier
+     * @return      an {@link Optional} containing the response if it exists,
+     * otherwise an empty Optional
      */
     public Optional<BankCardListResponse> find(String token) {
         return Optional.ofNullable(mockedResponses.get(token));
     }
 
     /**
-     * Removes the mock response for the specified token and updates storage.
+     * Removes the mock response for the specified token and synchronizes changes with the storage file.
      *
-     * @param token session token
-     * @return      true if the record was removed
+     * @param token unique session identifier to be cleared
+     * @return      true if the record was successfully found and removed;
+     * false if no record existed for the given token
      */
     public boolean clear(String token) {
         BankCardListResponse removed = mockedResponses.remove(token);
@@ -88,26 +104,35 @@ public class MockRepository {
     }
 
     /**
-     * Clears all data from memory and deletes the persistence file.
-     * Useful for test cleanup.
+     * Completely wipes all data from memory and deletes the persistence file from the disk.
+     * Typically used for broad test cleanup or system resets.
      */
     public void clearAll() {
         mockedResponses.clear();
         File file = new File(storagePath);
         if (file.exists()) {
             if (file.delete()) {
-                log.info("Persistence storage file deleted successfully.");
+                log.info(STORAGE_FILE_DELETED_SUCCESSFULLY);
             } else {
-                log.warn("Failed to delete persistence storage file.");
+                log.warn(FAILED_DELETE_STORAGE_FILE);
             }
         }
     }
 
+    /**
+     * Internal helper method to write the current in-memory state to the JSON storage file.
+     * Synchronized to prevent concurrent write issues.
+     */
     private synchronized void saveToFile() {
         try {
-            objectMapper.writeValue(new File(storagePath), mockedResponses);
+            File file = new File(storagePath);
+            File parentDir = file.getParentFile();
+            if (parentDir != null) {
+                parentDir.mkdirs();
+            }
+            objectMapper.writeValue(file, mockedResponses);
         } catch (IOException e) {
-            log.error("Failed to save mock to storage", e);
+            log.error(FAILED_SAVE_SESSION_TO_STORAGE, e);
         }
     }
 }

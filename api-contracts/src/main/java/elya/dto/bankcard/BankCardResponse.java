@@ -14,8 +14,9 @@ import org.hibernate.validator.constraints.Range;
 import java.math.BigDecimal;
 
 /**
- * Data Transfer Object representing bank card details received from the API.
- * Includes functionality to map the DTO to the internal BankCard domain model.
+ * Data Transfer Object representing the bank card details as returned by the API.
+ * <p>Extends the basic card information with a unique system identifier (cardId).
+ * This DTO is used to provide clients with the current state of mocked or real cards.</p>
  */
 @Data
 @NoArgsConstructor
@@ -23,20 +24,27 @@ import java.math.BigDecimal;
 @Builder
 @Setter
 @Slf4j
-@Schema(description = "Information about a specific bank card")
+@Schema(description = "Information about a specific bank card stored in the system")
 public class BankCardResponse {
 
+    /**
+     * The internal unique identifier assigned to the card instance.
+     */
     @Schema(
-            description = "Unique identifier of the card",
+            description = "Unique identifier of the card record",
             example = "1"
     )
     @NotNull(message = "Card ID is mandatory")
     @JsonProperty("cardId")
     private Long cardId;
 
+    /**
+     * The 16-digit primary account number.
+     * Validated for standard financial format consistency.
+     */
     @Schema(
-            description = "Masked or full card number",
-            example = "12345678"
+            description = "16-digit card number",
+            example = "1234567812345678"
     )
     @NotNull
     @Range(
@@ -46,15 +54,21 @@ public class BankCardResponse {
     @JsonProperty("cardNumber")
     private Long cardNumber;
 
+    /**
+     * The classification of the card (e.g., DEBIT or CREDIT).
+     */
     @Schema(
             description = "The category of the bank card",
-            example = "debit",
-            allowableValues = {"debit", "credit"}
+            example = "DEBIT",
+            allowableValues = {"DEBIT", "CREDIT"}
     )
     @JsonProperty("cardType")
     @NotNull(message = "Card type is mandatory")
     private CardType cardType;
 
+    /**
+     * Current availability status. If true, the card is active and can process transactions.
+     */
     @Schema(
             description = "Current operational status of the card (active/inactive)",
             example = "true"
@@ -62,6 +76,9 @@ public class BankCardResponse {
     @JsonProperty("cardStatus")
     private Boolean cardStatus;
 
+    /**
+     * The ISO currency code defining the card's primary account balance.
+     */
     @Schema(
             description = "Account currency code",
             example = "USD",
@@ -71,6 +88,9 @@ public class BankCardResponse {
     @JsonProperty("currency")
     private Currency currency;
 
+    /**
+     * The amount of money currently available on the account.
+     */
     @Schema(
             description = "Current account balance",
             example = "9999.99"
@@ -79,22 +99,26 @@ public class BankCardResponse {
     private BigDecimal balance;
 
     /**
-     * Converts the current DTO into a BankCard domain object.
+     * Maps the response DTO back to the internal {@link BankCard} domain model.
+     * Useful for internal processing where a business entity is required instead of a DTO.
      *
-     * @return a populated BankCard object
-     * @throws IllegalArgumentException if card type or currency cannot be parsed
+     * @return a fully populated {@link BankCard} domain object.
      */
     @JsonIgnore
     public BankCard getBankCard() {
-        var bankCard = BankCard.builder(cardNumber, cardType, currency)
+        return BankCard.builder(cardNumber, cardType, currency)
                 .cardId(cardId)
                 .cardStatus(cardStatus)
                 .balance(balance)
                 .build();
-
-        return bankCard;
     }
 
+    /**
+     * Static factory method to create a response DTO from a domain model and an explicit ID.
+     * * @param domain the {@link BankCard} business entity.
+     * @param id     the unique identifier to be assigned in the response.
+     * @return a mapped {@link BankCardResponse} instance.
+     */
     public static BankCardResponse fromDomain(BankCard domain, Long id) {
         return BankCardResponse.builder()
                 .cardId(id)

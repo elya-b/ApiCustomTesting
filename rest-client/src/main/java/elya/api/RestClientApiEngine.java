@@ -28,23 +28,26 @@ import static elya.restclient.constants.logs.ErrorLogs.*;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 
 /**
- * Core engine for executing HTTP requests using Java's native HttpClient.
- * Implements centralized request handling with detailed response metadata.
+ * Core engine for executing HTTP requests using Java's native {@link HttpClient}.
+ * <p>Handles the entire request lifecycle: URI construction, header mapping,
+ * payload serialization, and comprehensive response processing including
+ * status metadata generation.</p>
  */
 @Slf4j
-@Component
 public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine {
+
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ApiEmulatorHttpStatusInfoGenerator statusGenerator;
+
     @Setter
     private String baseUrl;
 
     /**
-     * Initializes the engine with base connection settings and status generator.
+     * Initializes the engine with default timeouts and status generation logic.
      *
-     * @param baseUrl         target server base address
-     * @param statusGenerator service for HTTP status metadata generation
+     * @param baseUrl         the target API root address.
+     * @param statusGenerator service to enrich responses with descriptive HTTP metadata.
      */
     public RestClientApiEngine(String baseUrl, ApiEmulatorHttpStatusInfoGenerator statusGenerator) {
         this.baseUrl = baseUrl;
@@ -56,14 +59,13 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
     }
 
     /**
-     * Low-level method to construct and dispatch HTTP requests.
-     * Automatically handles JSON serialization and header mapping.
+     * Low-level dispatcher that converts abstract request data into an {@link HttpRequest}.
      *
-     * @param method   HTTP verb (GET, POST, etc.)
-     * @param urlPath  target endpoint path
-     * @param jsonBody optional payload for the request
-     * @param headers  map of HTTP headers
-     * @return         wrapped RestClientApiResponse containing all execution data
+     * @param method   the HTTP verb.
+     * @param urlPath  the target endpoint (relative or absolute).
+     * @param jsonBody optional JSON payload.
+     * @param headers  custom HTTP headers.
+     * @return a populated {@link RestClientApiResponse}.
      */
     @Override
     public RestClientApiResponse sendRequest(HttpMethod method,
@@ -76,7 +78,7 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
         headers.forEach(requestBuilder::header);
 
         HttpRequest.BodyPublisher bodyPublisher;
-        if (jsonBody != null) {
+        if (jsonBody != null && !jsonBody.isMissingNode()) {
             requestBuilder.header(CONTENT_TYPE, APPLICATION_JSON.toString());
             try {
                 bodyPublisher = HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(jsonBody));
@@ -88,53 +90,25 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
             bodyPublisher = HttpRequest.BodyPublishers.noBody();
         }
 
-        requestBuilder.method(method.toString(), bodyPublisher);
+        requestBuilder.method(method.name(), bodyPublisher);
         return executeRequest(requestBuilder.build());
     }
 
-    /**
-     * Executes a POST request and returns the serialized JSON response.
-     *
-     * @param urlPath  endpoint path
-     * @param jsonBody payload to send
-     * @param headers  request headers
-     * @return         JsonNode containing the response body
-     */
     @Override
     public JsonNode post(String urlPath, JsonNode jsonBody, Map<String, String> headers) {
         return handleJsonResponse(sendRequest(HttpMethod.POST, urlPath, jsonBody, headers));
     }
 
-    /**
-     * Executes a GET request and returns the serialized JSON response.
-     *
-     * @param urlPath endpoint path
-     * @param headers request headers
-     * @return        JsonNode containing the response body
-     */
     @Override
     public JsonNode get(String urlPath, Map<String, String> headers) {
         return handleJsonResponse(sendRequest(HttpMethod.GET, urlPath, null, headers));
     }
 
-    /**
-     * Executes a standard DELETE request without additional headers.
-     *
-     * @param urlPath endpoint path
-     * @return        true if the operation was successful
-     */
     @Override
     public boolean delete(String urlPath) {
         return delete(urlPath, Collections.emptyMap());
     }
 
-    /**
-     * Executes an authorized DELETE request with custom headers.
-     *
-     * @param urlPath endpoint path
-     * @param headers map containing security tokens or metadata
-     * @return        true if the server responded with a success code
-     */
     @Override
     public boolean delete(String urlPath, Map<String, String> headers) {
         RestClientApiResponse response = sendRequest(HttpMethod.DELETE, urlPath, null, headers);
@@ -142,13 +116,11 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
     }
 
     /**
-     * Extracts and validates the JSON body from the API response.
-     *
-     * @param response raw execution results
-     * @return         valid JsonNode or an empty object node if failed
+     * Extracts the JSON tree from the response, ensuring a non-null node is always returned.
      */
     private JsonNode handleJsonResponse(RestClientApiResponse response) {
         JsonNode root = response.getResponseAsJson();
+        log.info("isSuccessful={}, statuses={}, body={}", response.isSuccessful(), response.getStatuses(), response.getResponseAsString());
         if (response.isSuccessful() && root != null) {
             return root;
         }
@@ -156,10 +128,8 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
     }
 
     /**
-     * Performs the actual HTTP exchange and populates the response object.
-     *
-     * @param request the configured HttpRequest to be executed
-     * @return        populated RestClientApiResponse with data from the server
+     * Synchronously dispatches the request and transforms the {@link HttpResponse}
+     * into a domain-specific {@link RestClientApiResponse}.
      */
     private RestClientApiResponse executeRequest(HttpRequest request) {
         RestClientApiResponse clientResponse = new RestClientApiResponse();
@@ -168,17 +138,23 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
             HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             int statusCode = httpResponse.statusCode();
-            clientResponse.setStatuses(statusGenerator.generateHttpStatusInfo(HttpStatus.valueOf(statusCode)));
+            try {
+                clientResponse.setStatuses(statusGenerator.generateHttpStatusInfo(HttpStatus.valueOf(statusCode)));
+            } catch (Exception e) {
+                log.warn("Received non-standard HTTP status code: {}", statusCode);
+            }
 
             String body = httpResponse.body();
             clientResponse.setResponseAsString(body);
 
             Map<String, String> headersMap = httpResponse.headers().map().entrySet().stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey,
-                            e -> e.getValue().stream().collect(Collectors.joining("; "))));
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> String.join("; ", e.getValue())
+                    ));
             clientResponse.setHeaders(headersMap);
 
-            if (body != null && !body.trim().isEmpty()) {
+            if (body != null && !body.isBlank()) {
                 clientResponse.setResponseAsJson(objectMapper.readTree(body));
             } else {
                 clientResponse.setResponseAsJson(objectMapper.createObjectNode());
@@ -188,7 +164,10 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
             log.error(HTTP_REQUEST_FAILED, request.uri(), e);
             clientResponse.setStatuses(statusGenerator.generateHttpStatusInfo(HttpStatus.SERVICE_UNAVAILABLE));
             clientResponse.setResponseAsString(e.getMessage());
-        } catch (IllegalArgumentException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+        } catch (Exception e) {
             log.error(UNKNOWN_HTTP_STATUS_CODE, request.uri(), e.getMessage());
             clientResponse.setStatuses(statusGenerator.generateHttpStatusInfo(HttpStatus.INTERNAL_SERVER_ERROR));
         }

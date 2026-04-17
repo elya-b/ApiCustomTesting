@@ -10,6 +10,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/**
+ * Spring Boot auto-configuration for the API Emulator.
+ * <p>Activates only if the property {@code api.emulator.enabled} is set to {@code true}
+ * (defaults to {@code true} if missing). It initializes required configuration properties
+ * and provides a default security setup for the emulator environment.</p>
+ */
 @Configuration
 @ConditionalOnClass(PasswordEncoder.class)
 @ConditionalOnProperty(
@@ -23,6 +29,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 })
 public class ApiEmulatorAutoConfiguration {
 
+    /**
+     * Provides a default {@link PasswordEncoder} bean if no other encoder is defined in the context.
+     * <p>Uses {@link NoOpPasswordEncoder} to simplify local testing and emulation,
+     * as performance and simplicity are prioritized over hashing in this specific mock context.</p>
+     *
+     * @return a plain-text password encoder instance.
+     */
     @Bean
     @ConditionalOnMissingBean
     public PasswordEncoder passwordEncoder() {

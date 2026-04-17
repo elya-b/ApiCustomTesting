@@ -19,11 +19,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static elya.emulator.constants.logs.ApiInfoLogs.MOCK_RESPONSE_SERVICE_START;
-import static elya.emulator.constants.logs.ApiInfoLogs.MOCK_RESPONSE_SERVICE_STOP;
+import static elya.emulator.constants.logs.ApiInfoLogs.*;
+import static elya.emulator.constants.logs.ApiWarnLogs.*;
 
 /**
  * Service for managing bank card mock data and providing it to the emulator.
+ * Handles the logic for seeding, retrieving, and granular deletion of mocked bank cards
+ * while maintaining data persistence via {@link MockRepository}.
  */
 @Slf4j
 @Service
@@ -34,11 +36,17 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
     private final TokenManagerService tokenManagerService;
     private static final BankCardListResponse EMPTY_RESPONSE = BankCardListResponse.of(Collections.emptyList());
 
+    /**
+     * Logs service initialization on startup.
+     */
     @PostConstruct
     public void init() {
         log.info(MOCK_RESPONSE_SERVICE_START);
     }
 
+    /**
+     * Logs service destruction on shutdown.
+     */
     @PreDestroy
     public void cleanup() {
         log.info(MOCK_RESPONSE_SERVICE_STOP);
@@ -46,15 +54,16 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
 
     /**
      * Updates the persistent mock response by appending new cards to the existing list.
-     * Automatically calculates the next available cardId based on the current maximum ID.
+     * <p>The service automatically calculates the next available {@code cardId}
+     * based on the current maximum ID in the user's session to prevent collisions.</p>
      *
-     * @param token   session token for identification
-     * @param request the simplified bank card data from the user
-     * @return        true if the merged mock data was successfully saved
+     * @param token   valid session token for identification
+     * @param request the {@link BankCardListRequest} containing new cards to add
+     * @return        the updated {@link BankCardListResponse} containing all currently mocked cards
      */
     @Override
     public BankCardListResponse setMockResponse(String token, BankCardListRequest request) {
-        log.info("Processing mock update request for token: [{}]", token);
+        log.info(PROCESSING_MOCK_UPDATE_REQUEST, token);
 
         if (request == null || request.getCards() == null) {
             mockRepository.save(token, EMPTY_RESPONSE);
@@ -80,27 +89,29 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
     }
 
     /**
-     * Removes the custom mock response associated with the token.
-     * @param token session token
-     * @return      true if the data was cleared successfully
+     * Removes the entire custom mock response associated with the token.
+     * * @param token unique session identifier
+     * @return      true if the record was found and successfully cleared from storage
      */
     @Override
     public boolean clearMockResponse(String token) {
-        log.info("Clearing mock response for token: [{}]", token);
+        log.info(CLEARING_MOCK_RESPONSE_FOR_TOKEN, token);
         return mockRepository.clear(token);
     }
 
     /**
      * Removes a specific card from the mocked response by its ID.
-     * If the card is found and removed, the updated list is saved back to the repository.
+     * <p>If the card is found, it is removed from the list, and the updated state
+     * is synchronized with the {@link MockRepository}.</p>
      *
      * @param token  Authorization session token
-     * @param cardId Unique identifier of the card to be removed
-     * @return       true if the card was found and the list was updated, false otherwise
+     * @param cardId unique identifier of the card to be removed
+     * @return       an {@link Optional} containing the deleted card's ID if found,
+     * otherwise an empty Optional
      */
     @Override
     public Optional<Long> deleteApiBankCardById(String token, Long cardId) {
-        log.info("Attempting to delete cardId: [{}] for token: [{}]", cardId, token);
+        log.info(ATTEMPTING_TO_DELETE_CARD_ID_FOR_TOKEN, cardId, token);
 
         BankCardListResponse currentCards = getApiBankCards(token);
         boolean removed = currentCards.getResponse().getCards()
@@ -109,20 +120,21 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
         if (removed) {
             mockRepository.save(token, currentCards);
 
-            log.info("Card with ID [{}] successfully deleted", cardId);
+            log.info(CARD_WITH_ID_DELETED_SUCCESSFULLY, cardId);
             return Optional.of(cardId);
         }
 
-        log.warn("Card with ID [{}] not found for deletion", cardId);
+        log.warn(CARD_NOT_FOUND_BY_ID_FOR_DELETION, cardId);
         return Optional.empty();
     }
 
     /**
-     * Retrieves the mocked bank cards for the emulator API.
-     * Returns an empty response structure if no mock is set.
+     * Retrieves all mocked bank cards for the current session.
+     * <p>This method triggers token validation via {@link TokenManagerService}.
+     * If no mock is found for the token, an empty response structure is returned.</p>
      *
-     * @param token Authorization token
-     * @return      List of mocked bank cards
+     * @param token Authorization token for session lookup
+     * @return      a {@link BankCardListResponse} containing the cards (may be empty)
      */
     @Override
     public BankCardListResponse getApiBankCards(String token) {
@@ -131,15 +143,16 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
     }
 
     /**
-     * Retrieves a specific mocked bank card by its ID for the emulator API.
+     * Retrieves a specific mocked bank card by its ID from the current session.
      *
      * @param token  Authorization token
-     * @param cardId Unique identifier of the card
-     * @return       An Optional containing the BankCardResponse if found, or empty otherwise
+     * @param cardId unique identifier of the card
+     * @return       an {@link Optional} containing the {@link BankCardResponse} if found,
+     * otherwise empty
      */
     @Override
     public Optional<BankCardResponse> getApiBankCardById(String token, Long cardId) {
-        log.info("Searching for cardId: [{}] for token: [{}]", cardId, token);
+        log.info(SEARCHING_FOR_CARD_ID_FOR_TOKEN, cardId, token);
         return getApiBankCards(token).getResponse().getCards()
                 .stream()
                 .filter(card -> card.getCardId().equals(cardId))

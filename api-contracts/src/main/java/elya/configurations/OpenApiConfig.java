@@ -8,8 +8,21 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 
+/**
+ * Configuration class for OpenAPI (Swagger) documentation.
+ * Defines global security schemes and UI metadata for the Bank API Emulator.
+ */
 @Configuration
 public class OpenApiConfig {
+
+    /**
+     * Customizes the OpenAPI definition to include global Bearer Authentication support.
+     * <p>This configuration adds a "bearerAuth" security scheme to the Swagger UI,
+     * allowing users to input their session token and automatically include it
+     * in the {@code Authorization} header for all protected endpoints.</p>
+     *
+     * @return a configured {@link OpenAPI} instance with JWT/Bearer security requirements
+     */
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()

@@ -7,6 +7,19 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+
+/**
+ * Unit tests for {@link elya.ApiEmulatorRunner}.
+ * <ul>
+ *   <li>{@code start()} launches the application, sets port and context</li>
+ *   <li>{@code start()} ignores a second call when the server is already running</li>
+ *   <li>{@code start()} assigns a random port when port=0</li>
+ *   <li>{@code start()} throws an exception when the port is already in use</li>
+ *   <li>{@code stop()} shuts down the application; context becomes null</li>
+ *   <li>{@code getBean()} returns a bean by type when context is active</li>
+ *   <li>{@code getBean()} throws NullPointerException when context is null</li>
+ * </ul>
+ */
 public class ApiEmulatorRunnerTests {
 
     private ApiEmulatorRunner runner;

@@ -1,19 +1,21 @@
 package elya.interfaces;
 
-
 import com.fasterxml.jackson.databind.JsonNode;
-
 import java.util.Map;
+
 /**
- * Interface for read-only API operations.
+ * Interface defining read-only API operations.
+ * <p>Used to segregate components that only require data retrieval capabilities,
+ * preventing accidental state-changing operations.</p>
  */
 public interface IReadOnlyClient {
+
     /**
-     * Executes a GET request to the specified path.
+     * Executes a GET request to the specified endpoint.
      *
-     * @param urlPath endpoint path or full URL
-     * @param headers map of request headers
-     * @return        response body as a JsonNode
+     * @param urlPath the target endpoint path or a fully qualified URL.
+     * @param headers a map containing HTTP headers (e.g., Authorization).
+     * @return the response body parsed as a {@link JsonNode}.
      */
     JsonNode get(String urlPath, Map<String, String> headers);
 }

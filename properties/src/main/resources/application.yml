@@ -2,6 +2,7 @@ server:
   port: 8080
   error:
     include-message: always
+    include-stacktrace: always
     include-binding-errors: never
 
 spring:
@@ -13,14 +14,13 @@ api:
     users:
       - login: "admin"
         password: "admin"
-        role: "ADMIN" # full accessibility
+        role: "ADMIN"
       - login: "qa"
         password: "qa"
-        role: "QA" # read only
-
-  token:
-    expiration: 3600 # token lifetime is 1 Hour
-    issuer: ${TOKEN_ISSUER:api-emulator}
+        role: "QA"
+    token:
+      expiration: 3600 # token lifetime is 1 Hour
+      issuer: ${TOKEN_ISSUER:api-emulator}
 
 management:
   # Actuator Endpoints Configuration

@@ -7,18 +7,22 @@ import org.springframework.http.HttpMethod;
 import java.util.Map;
 
 /**
- * Interface for the core execution engine of the REST client.
- * Provides a low-level method for sending any type of HTTP request.
+ * Interface defining the core execution logic for the REST infrastructure.
+ * <p>Serves as the low-level dispatcher responsible for transforming abstract
+ * request definitions into actual network exchanges and capturing raw results
+ * into a standardized response container.</p>
  */
 public interface IRestClientApiEngine {
+
     /**
-     * Sends an HTTP request and returns a comprehensive response object.
+     * Dispatches an HTTP request and captures comprehensive execution metadata.
      *
-     * @param method   HTTP method (GET, POST, PUT, DELETE, etc.)
-     * @param urlPath  endpoint path or full URL
-     * @param jsonBody request body as JsonNode
-     * @param headers  map of request headers
-     * @return         a RestClientApiResponse containing status code, headers, and body
+     * @param method   the {@link HttpMethod} (GET, POST, etc.) to be used.
+     * @param urlPath  the target endpoint path or a fully qualified URI.
+     * @param jsonBody an optional {@link JsonNode} representing the request payload.
+     * @param headers  a map of HTTP headers to include in the request.
+     * @return a {@link RestClientApiResponse} containing the status code,
+     * processed headers, and the response body in multiple formats.
      */
     RestClientApiResponse sendRequest(
             HttpMethod method,

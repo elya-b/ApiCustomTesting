@@ -12,6 +12,12 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * Unit tests for {@link elya.dto.bankcard.BankCardResponse}.
+ * <ul>
+ *   <li>{@code getBankCard()} correctly maps all response fields to the {@link elya.card.BankCard} domain model</li>
+ * </ul>
+ */
 public class BankCardResponseTests {
 
     @Test

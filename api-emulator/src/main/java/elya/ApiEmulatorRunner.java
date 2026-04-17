@@ -6,37 +6,40 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * Low-level runner responsible for managing the Spring Boot application context of the API Emulator.
- * It provides direct control over starting and stopping the application instance.
+ * Provides granular control over the application lifecycle, including programmatically starting
+ * and stopping the instance within a testing environment.
  */
 public class ApiEmulatorRunner {
     private final int initialPort;
 
     /**
-     * The actual port the emulator is running on.
-     * Available after the {@link #start()} method is successfully executed.
+     * The actual port the emulator is bound to.
+     * This value is resolved from the environment after successful startup
+     * and may differ from the initial port if port 0 was requested.
      */
     @Getter
     private int actualPort;
 
     /**
      * The Spring Application Context of the running emulator.
-     * Used to retrieve internal beans for testing purposes.
+     * Provides access to the underlying bean container and environment properties.
      */
     @Getter
     private ConfigurableApplicationContext appContext;
 
     /**
-     * Constructs a runner with a target port.
+     * Constructs a runner with a specific target port configuration.
      *
-     * @param initialPort The preferred port to start the emulator on.
+     * @param initialPort the preferred port number to bind the emulator to (use 0 for a random available port).
      */
     public ApiEmulatorRunner(int initialPort) {
         this.initialPort = initialPort;
     }
 
     /**
-     * Launches the Spring Boot application.
-     * If the application is already running, the call is ignored to prevent memory leaks.
+     * Launches the Spring Boot application using the {@link ApiEmulator} configuration.
+     * If an instance is already active, the request is ignored to prevent context duplication.
+     * Upon startup, resolves the local server port and logs the status.
      */
     public void start() {
         if (isRunning()) {
@@ -56,6 +59,7 @@ public class ApiEmulatorRunner {
 
     /**
      * Gracefully shuts down the Spring Boot application context.
+     * Releases all bound resources, including the embedded web server and port.
      */
     public void stop() {
         if (appContext != null) {
@@ -66,16 +70,17 @@ public class ApiEmulatorRunner {
     }
 
     /**
-     * Checks if the emulator's application context is active and running.
+     * Checks the current state of the emulator's application context.
      *
-     * @return true if the context is non-null and running, false otherwise.
+     * @return {@code true} if the context is initialized and active; {@code false} otherwise.
      */
     public boolean isRunning() {
         return appContext != null && appContext.isRunning();
     }
 
     /**
-     * Prints a visual confirmation of the emulator startup to the console.
+     * Prints a visual startup confirmation to the system console.
+     * Displays the final bound port for debugging purposes.
      */
     private void logBanner() {
         System.out.println("\n##########################################");
@@ -84,7 +89,13 @@ public class ApiEmulatorRunner {
     }
 
     /**
-     * Retrieves a bean from the context.
+     * Retrieves a specific bean instance from the running application context.
+     * Useful for performing deep assertions or state modifications in integration tests.
+     *
+     * @param <T>       the type of the bean to retrieve
+     * @param beanClass the class of the bean to retrieve
+     * @return the bean instance found in the context
+     * @throws org.springframework.beans.BeansException if the bean could not be found or initialized
      */
     public <T> T getBean(Class<T> beanClass) {
         return appContext.getBean(beanClass);

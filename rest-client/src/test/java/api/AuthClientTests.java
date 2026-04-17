@@ -26,6 +26,15 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Unit tests (Mockito) for {@link elya.api.AuthClient}.
+ * <ul>
+ *   <li>{@code generateAuthToken()} — returns AuthResponse for valid credentials</li>
+ *   <li>{@code generateAuthToken()} — throws RestClientException when response is null</li>
+ *   <li>{@code generateAuthToken()} — throws RestClientException when response is an empty object</li>
+ *   <li>{@code generateAuthToken()} — sends the correct request body (login + password)</li>
+ * </ul>
+ */
 @ExtendWith(MockitoExtension.class)
 public class AuthClientTests {
 
@@ -51,7 +60,7 @@ public class AuthClientTests {
         assertAll("AuthResponse validation",
                 () -> assertNotNull(response, "Response should not be null"),
                 () -> assertTrue(response.getSuccess(), "Response status should be true"),
-                () -> assertEquals(SUCCESS.name(), response.getMessage(), "Message should match")
+                () -> assertEquals(SUCCESS.toString(), response.getMessage(), "Message should match")
         );
 
         verify(clientApi).post(eq(URL_TOKEN), any(), anyMap());

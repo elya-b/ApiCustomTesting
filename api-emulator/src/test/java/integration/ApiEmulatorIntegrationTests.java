@@ -13,6 +13,7 @@ import elya.repository.MockRepository;
 import elya.repository.SessionRepository;
 import elya.services.MockService;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,32 +41,24 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
 /**
- * INTEGRATION TEST COVERAGE CHECKLIST:
- *
- * 1. AUTHENTICATION & SECURITY
- * - [x] POST /token: Successful generation of session token
- * - [x] GET /bank-cards: Intercept and return 401 Unauthorized for invalid Bearer token
- * - [x] Session Expiration: Return 401 when session is cleared from SessionRepository
- * - [x] Isolation: User A cannot see or clear User B's mocked data
- *
- * 2. MOCK DATA MANAGEMENT (CRUD)
- * - [x] APPEND LOGIC: POST /mock updates data by adding cards, not overwriting
- * - [x] ID GENERATION: Auto-increment cardId based on current max ID in user's list
- * - [x] GET /bank-cards/{id}: Retrieve specific card by ID or return 404 if missing
- * - [x] DELETE /bank-cards/{id}: Remove specific card and verify 404 on next access
- * - [x] DELETE /mock: Full clear of all mocked cards for the specific user
- * - [x] EMPTY LISTS: Verify that sending an empty BankCardListRequest doesn't wipe existing data
- *
- * 3. PERSISTENCE & FAULT TOLERANCE
- * - [x] RECOVERY: Data survives MockRepository.init() reload (JSON file persistence)
- * - [x] RESILIENCE: init() survives corrupted/invalid JSON files in /mocks directory
- * - [x] CLEANUP: Temporary test files are deleted after use
- *
- * 4. PERFORMANCE & DATA INTEGRITY
- * - [x] ENUM MAPPING: Successful JSON conversion for Currency and CardType
- * - [x] VALIDATION: Return 400 Bad Request for invalid inputs (e.g., 15-digit card numbers)
- * - [x] CONCURRENCY: Handle simultaneous updates from multiple threads safely
- * - [x] STRESS: Handle large payloads (100+ cards) in a single request
+ * Integration tests for {@link elya.ApiEmulator} (full Spring context).
+ * <ul>
+ *   <li>{@code init()} — data persists after repository reload (JSON-based persistence)</li>
+ *   <li>{@code setMockResponse()} — new cards are appended to the existing list (APPEND logic)</li>
+ *   <li>{@code setMockResponse()} — cardId is incremented based on the current maximum</li>
+ *   <li>{@code deleteById()} — subsequent GET returns 404 after card deletion</li>
+ *   <li>{@code clear()} — removes all mocks for the specific user</li>
+ *   <li>{@code clear()} — does not affect other users' data (isolation)</li>
+ *   <li>{@code setMockResponse()} — returns 400 and does not save data for an invalid card number</li>
+ *   <li>{@code intercept()} — returns 401 for an invalid token</li>
+ *   <li>{@code mapping()} — correctly maps Currency and CardType enum fields from JSON</li>
+ *   <li>{@code concurrency()} — safely handles concurrent requests from multiple threads</li>
+ *   <li>{@code getById()} — returns 404 when a card ID does not exist</li>
+ *   <li>{@code setMockResponse()} — empty list request does not overwrite existing data</li>
+ *   <li>{@code init()} — gracefully handles a corrupted JSON file</li>
+ *   <li>{@code setMockResponse()} — handles a large payload (100+ cards in one request)</li>
+ *   <li>{@code intercept()} — returns 401 when session is invalidated (SessionRepository)</li>
+ * </ul>
  */
 @SpringBootTest(classes = elya.ApiEmulator.class) // Starts the full Spring application context for the test
 @AutoConfigureMockMvc // Sets up the MockMvc instance to simulate HTTP requests
@@ -109,7 +102,7 @@ public class ApiEmulatorIntegrationTests {
 
         var mock = mockRepository.find(token);
         assertTrue(mock.isPresent(), "Data should be available after repository re-initialization");
-        assertEquals(CARD_NUMBER, mock.get().getResponse().getCards().get(0).getCardNumber());
+        assertEquals(CARD_NUMBER, mock.get().getResponse().getCards().getFirst().getCardNumber());
     }
 
     @Test
@@ -144,7 +137,7 @@ public class ApiEmulatorIntegrationTests {
                 .header(AUTHORIZATION, BEARER + token)).andExpect(MockMvcResultMatchers.status().isOk());
 
         mockMvc.perform(MockMvcRequestBuilders.get(ApiEndpoints.URL_BANK_CARD_DATA_ID, CARD_ID)
-                .header(AUTHORIZATION, BEARER + token))
+                        .header(AUTHORIZATION, BEARER + token))
                 .andExpect(
                         MockMvcResultMatchers.status().isNotFound()
                 );
@@ -156,7 +149,7 @@ public class ApiEmulatorIntegrationTests {
         String token = loginAndGetToken(LOGIN_REQUEST);
         setMockResponse(token, createRequest(CARD_NUMBER, Currency.EUR), true);
 
-        mockMvc.perform(MockMvcRequestBuilders.delete(ApiEndpoints.URL_BANK_CARD_MOCK)
+        mockMvc.perform(MockMvcRequestBuilders.delete(ApiEndpoints.URL_BANK_CARD_DATA)
                 .header(AUTHORIZATION, BEARER + token)).andExpect(MockMvcResultMatchers.status().isOk());
 
         assertThat(getBankCards(token).getResponse().getCards()).isEmpty();
@@ -170,7 +163,7 @@ public class ApiEmulatorIntegrationTests {
         setMockResponse(tokenA, createRequest(CARD_NUMBER, Currency.EUR), true);
         setMockResponse(tokenB, createRequest(CARD_NUMBER_2, Currency.EUR), true);
 
-        mockMvc.perform(MockMvcRequestBuilders.delete(ApiEndpoints.URL_BANK_CARD_MOCK).header(AUTHORIZATION, BEARER + tokenA));
+        mockMvc.perform(MockMvcRequestBuilders.delete(ApiEndpoints.URL_BANK_CARD_DATA).header(AUTHORIZATION, BEARER + tokenA));
 
         assertThat(getBankCards(tokenB).getResponse().getCards()).hasSize(1);
     }
@@ -229,7 +222,7 @@ public class ApiEmulatorIntegrationTests {
     void getById_ShouldReturn404_WhenIdIsMissing() throws Exception {
         String token = loginAndGetToken(LOGIN_REQUEST);
         mockMvc.perform(MockMvcRequestBuilders.get(ApiEndpoints.URL_BANK_CARD_DATA_ID, 999L)
-                .header(AUTHORIZATION, BEARER + token))
+                        .header(AUTHORIZATION, BEARER + token))
                 .andExpect(
                         MockMvcResultMatchers.status().isNotFound()
                 );
@@ -302,14 +295,12 @@ public class ApiEmulatorIntegrationTests {
                 .andExpect(MockMvcResultMatchers.status().isUnauthorized());
     }
 
-
-
     private BankCardListRequest createRequest(Long number, Currency currency) {
         return BankCardListRequest.of(List.of(BankCardRequest.builder()
-                                                                .cardNumber(number)
-                                                                .cardType(CardType.DEBIT)
-                                                                .currency(currency)
-                                                                .build()));
+                .cardNumber(number)
+                .cardType(CardType.DEBIT)
+                .currency(currency)
+                .build()));
     }
 
     private BankCardListResponse getBankCards(String token) throws Exception {
@@ -319,7 +310,7 @@ public class ApiEmulatorIntegrationTests {
     }
 
     private void setMockResponse(String token, BankCardListRequest request, Boolean result) throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post(ApiEndpoints.URL_BANK_CARD_MOCK)
+        mockMvc.perform(MockMvcRequestBuilders.post(ApiEndpoints.URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, BEARER + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -329,7 +320,6 @@ public class ApiEmulatorIntegrationTests {
     }
 
     private String loginAndGetToken(AuthRequest authRequest) throws Exception {
-
         var result = mockMvc.perform(MockMvcRequestBuilders.post(ApiEndpoints.URL_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(authRequest)))

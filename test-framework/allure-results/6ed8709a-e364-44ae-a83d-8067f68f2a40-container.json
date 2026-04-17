@@ -1,0 +1,1 @@
+{"uuid":"6ed8709a-e364-44ae-a83d-8067f68f2a40","name":"getBankCards() - Should return empty list when API throws exception","children":["fd88c760-df8f-48a4-ac2d-fc0b182d7ee8"],"befores":[],"afters":[],"start":1776201029086,"stop":1776201029108}

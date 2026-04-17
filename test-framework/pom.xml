@@ -51,6 +51,11 @@
 
         <dependency>
             <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-java-commons</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
             <artifactId>allure-junit5</artifactId>
             <scope>test</scope>
         </dependency>
@@ -79,7 +84,6 @@
         <dependency>
             <groupId>elya</groupId>
             <artifactId>properties</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
@@ -107,6 +111,11 @@
                         -javaagent:"${org.aspectj:aspectjweaver:jar}"
                     </argLine>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-maven</artifactId>
             </plugin>
         </plugins>
     </build>

@@ -24,13 +24,27 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static elya.engine.services.emulator.constants.exceptions.Exceptions.FAILED_TO_GENERATE_AUTH_TOKEN;
+import static elya.enums.responsemodel.ApiBankCards.CARDS;
+import static elya.enums.responsemodel.ApiBankCards.RESPONSE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests (Mockito) for {@link elya.engine.services.emulator.EmulatorLifecycleManager}.
+ * <ul>
+ *   <li>{@code getBankCards()} — returns a mapped BankCard list for a valid JSON response</li>
+ *   <li>{@code getBankCards()} — returns an empty list when the API throws an exception</li>
+ *   <li>{@code performLogin()} — returns a token for a valid response</li>
+ *   <li>{@code performLogin()} — throws IllegalStateException for invalid responses (parameterized: success=false or data=null)</li>
+ *   <li>{@code waitUntilReady()} — succeeds when the emulator becomes ready on the second attempt</li>
+ *   <li>{@code waitUntilReady()} — throws an exception after timeout when the service is unavailable</li>
+ * </ul>
+ */
 @ExtendWith(MockitoExtension.class)
 public class EmulatorLifecycleManagerTests {
 
@@ -57,8 +71,12 @@ public class EmulatorLifecycleManagerTests {
     @DisplayName("getBankCards() - Should return mapped BankCard list when API returns valid JSON")
     void getBankCards_ShouldReturnMappedCards_WhenResponseIsValid() {
         var dtoList = List.of(BankCardResponse.builder().cardId(CARD_ID).build());
-
-        when(restClient.get(anyString(), anyMap())).thenReturn(toJson(dtoList));
+        var wrappedResponse = Map.of(
+                RESPONSE.toString(), Map.of(
+                        CARDS.toString(), dtoList
+                )
+        );
+        when(restClient.get(anyString(), anyMap())).thenReturn(toJson(wrappedResponse));
 
         var cards = manager.getBankCards(TOKEN);
 

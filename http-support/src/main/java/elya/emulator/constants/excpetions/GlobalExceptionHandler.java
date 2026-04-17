@@ -1,50 +1,59 @@
 package elya.emulator.constants.excpetions;
 
 import elya.dto.auth.AuthResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Optional;
 
 /**
- * Global interceptor for handling exceptions across the entire application.
- * It uses Spring's @RestControllerAdvice to catch exceptions thrown by any controller
- * and transform them into a standardized JSON response format.
+ * Global interceptor for centralized exception handling across the API Emulator.
+ * <p>Uses {@link RestControllerAdvice} to intercept exceptions thrown by controllers
+ * and normalize them into a consistent {@link AuthResponse} format. This ensures
+ * that the client always receives a structured JSON response instead of a stack trace.</p>
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
     /**
-     * Specifically handles TokenValidationException to ensure 401 Unauthorized status.
+     * Handles authentication failures specifically related to token validation.
      *
-     * @param ex The exception thrown during failed authentication.
-     * @return ResponseEntity with AuthResponse and 401 Unauthorized status.
+     * @param ex the caught {@link TokenValidationException}.
+     * @return a {@link ResponseEntity} with {@code 401 Unauthorized} and error details.
      */
     @ExceptionHandler(TokenValidationException.class)
     public ResponseEntity<AuthResponse> handleTokenValidation(TokenValidationException ex) {
+        log.error("Unexpected error: ", ex);
         return buildErrorResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED);
     }
 
     /**
-     * Handles custom application exceptions derived from ApiEmulatorException.
+     * Handles custom business logic exceptions derived from {@link ApiEmulatorException}.
      *
-     * @param ex The caught exception containing the specific HttpStatus and error message.
-     * @return ResponseEntity containing the standardized error body and the corresponding status code.
+     * @param ex the caught exception containing a pre-defined HTTP status.
+     * @return a {@link ResponseEntity} with the specific status and error message.
      */
     @ExceptionHandler(ApiEmulatorException.class)
     public ResponseEntity<AuthResponse> handleApiError(ApiEmulatorException ex) {
+        log.error("Unexpected error: ", ex);
         return buildErrorResponse(ex.getMessage(), ex.getStatus());
     }
 
     /**
-     * Handles validation exceptions that occur when @Valid body fails constraints.
-     * It extracts the default message from the first validation error found.
+     * Handles JSR-303 validation errors (e.g., {@code @NotNull}, {@code @Range}).
+     * <p>Extracts the first available validation message to provide specific
+     * feedback to the client regarding invalid request fields.</p>
      *
-     * @param ex The MethodArgumentNotValidException containing binding results.
-     * @return ResponseEntity containing the standardized error body with a 400 Bad Request status.
+     * @param ex the exception containing validation results.
+     * @return a {@link ResponseEntity} with {@code 400 Bad Request}.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<AuthResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -56,41 +65,48 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Catch-all handler for any unexpected internal server errors.
-     * Prevents leaking technical stack traces to the client.
+     * Handles malformed or missing JSON request bodies.
      *
-     * @param ex The unexpected exception.
-     * @return ResponseEntity with a generic error message and 500 Internal Server Error status.
+     * @param ex the exception thrown when the body is unreadable.
+     * @return a {@link ResponseEntity} with {@code 400 Bad Request}.
      */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<AuthResponse> handleGeneralException(Exception ex) {
-        return buildErrorResponse("An unexpected internal error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    /**
-     * Handles cases where the request body is missing or cannot be read (e.g., null body).
-     * Fixes: ApiEmulatorControllerTests.setMockResponse_ShouldHandleNullBody
-     */
-    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
-    public ResponseEntity<AuthResponse> handleMissingBody(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<AuthResponse> handleMissingBody(HttpMessageNotReadableException ex) {
+        log.error("Unexpected error: ", ex);
         return buildErrorResponse("Required request body is missing", HttpStatus.BAD_REQUEST);
     }
 
     /**
-     * Handles cases where a required header (like Authorization) is missing.
-     * Fixes: ApiEmulatorControllerTests.setMockResponse_ShouldReturn400_WhenHeaderIsMissing
+     * Handles missing mandatory request headers (e.g., missing Authorization header).
+     *
+     * @param ex the exception thrown when a required binding is missing.
+     * @return a {@link ResponseEntity} with {@code 400 Bad Request}.
      */
-    @ExceptionHandler(org.springframework.web.bind.ServletRequestBindingException.class)
-    public ResponseEntity<AuthResponse> handleMissingHeader(org.springframework.web.bind.ServletRequestBindingException ex) {
+    @ExceptionHandler(ServletRequestBindingException.class)
+    public ResponseEntity<AuthResponse> handleMissingHeader(ServletRequestBindingException ex) {
+        log.error("Unexpected error: ", ex);
         return buildErrorResponse("Required request header is missing", HttpStatus.BAD_REQUEST);
     }
 
     /**
-     * Helper method to construct a standardized error ResponseEntity.
+     * Catch-all handler for any unhandled internal server errors.
+     * <p>Prevents sensitive technical details and stack traces from leaking to the client.</p>
      *
-     * @param message The error message to be returned to the client.
-     * @param status  The HTTP status code for the response.
-     * @return A ResponseEntity containing the formatted AuthResponse.
+     * @param ex the unexpected exception.
+     * @return a {@link ResponseEntity} with {@code 500 Internal Server Error}.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<AuthResponse> handleGeneralException(Exception ex) {
+        log.error("Unexpected error: ", ex);
+        return buildErrorResponse("An unexpected internal error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * Helper method to wrap error messages into a consistent {@link AuthResponse} envelope.
+     *
+     * @param message the error message to display.
+     * @param status  the {@link HttpStatus} code for the response.
+     * @return a {@link ResponseEntity} containing the standardized error body.
      */
     private ResponseEntity<AuthResponse> buildErrorResponse(String message, HttpStatus status) {
         AuthResponse response = AuthResponse.builder()

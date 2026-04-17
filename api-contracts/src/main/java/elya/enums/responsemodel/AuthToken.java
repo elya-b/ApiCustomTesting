@@ -1,30 +1,29 @@
 package elya.enums.responsemodel;
 
-/**
- * Enumeration representing key constants for authentication token responses.
- * Used to identify and validate status fields within the authorization flow.
- */
-public enum AuthToken {
-    /** Indicates a successful token operation outcome. */
-    SUCCESS("Success"),
-    ;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.ToString;
 
+/**
+ * Enumeration representing key constants and status identifiers for authentication token responses.
+ * <p>Used to maintain consistency in status messaging and JSON field values
+ * throughout the authorization and session management lifecycle.</p>
+ */
+@Getter
+@AllArgsConstructor
+public enum AuthToken {
+
+    /**
+     * Represents a successful outcome of an authentication or token-related operation.
+     * Typically used in the 'Message' field of the {@code AuthResponse}.
+     */
+    SUCCESS("Success");
+
+    /**
+     * The literal string value used in the API response payload.
+     */
     private final String responseKey;
 
-    /**
-     * Initializes the enum constant with its corresponding response key.
-     *
-     * @param responseKey the string literal representing the response status
-     */
-    AuthToken(String responseKey) {
-        this.responseKey = responseKey;
-    }
-
-    /**
-     * Returns the string representation of the response key.
-     *
-     * @return the literal response key value
-     */
     @Override
     public String toString() {
         return responseKey;

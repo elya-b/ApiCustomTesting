@@ -5,6 +5,10 @@ import elya.dto.bankcard.BankCardListResponse;
 
 import java.util.Optional;
 
+/**
+ * Contract for controlling mock bank card data in the emulator.
+ * Provides methods to seed, clear, and partially delete mocked bank card responses.
+ */
 public interface IMockControlApi {
 
     BankCardListResponse setMockResponse(String token, BankCardListRequest request);

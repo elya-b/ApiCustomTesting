@@ -25,10 +25,10 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
 /**
  * REST controller for the bank card emulator.
- * Provides endpoints to manage mock data, perform authentication,
- * and simulate bank card API responses.
+ * Provides a comprehensive set of endpoints to manage custom mock data,
+ * handle session-based authentication, and simulate real bank card API behaviors.
  */
-@Tag(name = "Bank Card Emulator", description = "Operations for managing mocked bank card responses")
+@Tag(name = "Bank Card Emulator", description = "Operations for managing mocked bank card responses and sessions")
 @RestController
 @RequiredArgsConstructor
 public class ApiEmulatorController {
@@ -36,54 +36,58 @@ public class ApiEmulatorController {
     private final MockService mockService;
 
     /**
-     * Authenticates a user and generates a new session token.
+     * Authenticates the user and generates a unique session token.
+     * The token is required for all subsequent operations in the emulator.
      *
-     * @param request login credentials including username and password
-     * @return        ResponseEntity containing the AuthResponse with session token
+     * @param request the {@link AuthRequest} containing valid user credentials
+     * @return a {@link ResponseEntity} containing the session token and expiration details
      */
     @Operation(
             summary = "Generate Auth Token",
-            description = "Authenticates user credentials and returns a session token"
+            description = "Verifies credentials and issues a session-based Bearer token"
     )
-    @ApiResponse(responseCode = "200", description = "Token generated successfully")
+    @ApiResponse(responseCode = "200", description = "Authentication successful, token issued")
     @PostMapping(value = URL_TOKEN, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AuthResponse> generateAuthToken(@Valid @RequestBody AuthRequest request) {
-
         return ResponseEntity.ok(authService.generateAuthToken(request));
     }
 
     /**
-     * Sets or updates the mock card data for the current session.
+     * Seeds or updates the mock database with custom bank card data for the current session.
+     * Appends new cards to the existing list and generates unique internal IDs.
      *
-     * @param token   Authorization header containing the session token
-     * @param request list of cards to be set in the mock response
-     * @return        ResponseEntity containing the newly set BankCardListResponse
+     * @param token   the Authorization header (Bearer token)
+     * @param request the {@link BankCardListRequest} containing the cards to be mocked
+     * @return a {@link ResponseEntity} containing the full updated list of mocked cards
      */
-    @Operation(summary = "Set Mock Response")
-    @PostMapping(URL_BANK_CARD_MOCK)
+    @Operation(
+            summary = "Set Mock Response",
+            description = "Appends new bank card mocks to the current session storage"
+    )
+    @ApiResponse(responseCode = "200", description = "Mock data updated successfully")
+    @PostMapping(value = URL_BANK_CARD_DATA, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<BankCardListResponse> setMockResponse(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token,
                                                                 @Valid @RequestBody BankCardListRequest request) {
         String cleanToken = extractToken(token);
         BankCardListResponse response = mockService.setMockResponse(cleanToken, request);
-
         return ResponseEntity.ok(response);
     }
 
     /**
-     * Removes the entire custom mock response for the current session.
+     * Deletes all custom mock data associated with the current session token.
+     * Resets the mock state to an empty list.
      *
-     * @param token Authorization header containing the session token
-     * @return      ResponseEntity with a success message
+     * @param token the Authorization header (Bearer token)
+     * @return a JSON object containing the result status and a success message
      */
     @Operation(
             summary = "Clear Mock Response",
-            description = "Removes the custom mock response associated with the current session token")
-    @ApiResponse(responseCode = "200", description = "Mock data cleared successfully")
-    @DeleteMapping(URL_BANK_CARD_MOCK)
-        public ResponseEntity<Map<String, Object>> clearMockResponse(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token) {
-
+            description = "Removes all custom mock data associated with the current session"
+    )
+    @ApiResponse(responseCode = "200", description = "Mock storage cleared successfully")
+    @DeleteMapping(value = URL_BANK_CARD_DATA, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> clearMockResponse(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token) {
         boolean isCleared = mockService.clearMockResponse(extractToken(token));
-
         return ResponseEntity.ok(Map.of(
                 "result", isCleared,
                 "message", MOCK_CLEARED
@@ -91,70 +95,66 @@ public class ApiEmulatorController {
     }
 
     /**
-     * Deletes a specific bank card from the mock by its unique identifier.
+     * Removes a specific bank card from the session mock by its cardId.
      *
-     * @param token  Authorization header containing the session token
-     * @param cardId unique identifier of the card to be deleted
-     * @return       ResponseEntity containing the ID of the deleted card or 404 if not found
+     * @param token  the Authorization header (Bearer token)
+     * @param cardId the unique long identifier of the bank card
+     * @return a JSON object with the deleted cardId or a 404 Not Found status
      */
     @Operation(
             summary = "Delete Specific Mock Card",
-            description = "Removes a single card by its ID and returns the ID of the deleted card")
-    @ApiResponse(
-            responseCode = "200", description = "Card deleted successfully")
-    @ApiResponse(
-            responseCode = "404", description = "Card not found")
-    @DeleteMapping(
-            value = URL_BANK_CARD_DATA_ID,
-            produces = MediaType.APPLICATION_JSON_VALUE)
+            description = "Granularly removes a single card from the mock list by its ID"
+    )
+    @ApiResponse(responseCode = "200", description = "Card successfully removed")
+    @ApiResponse(responseCode = "404", description = "Card with the specified ID not found")
+    @DeleteMapping(value = URL_BANK_CARD_DATA_ID, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> deleteBankCardById(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token,
                                                 @PathVariable(name = "cardId") Long cardId) {
-
         return mockService.deleteApiBankCardById(extractToken(token), cardId)
                 .map(id -> ResponseEntity.ok(Map.of("cardId", id)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * Retrieves either all mocked bank cards or a specific card by its identifier.
-     * Supports optional path variable for granular data retrieval.
+     * Retrieves bank card data. If a cardId is provided, returns a single card;
+     * otherwise, returns the full list of mocked cards for the session.
      *
-     * @param token  Authorization token
-     * @param cardId optional unique identifier of the card
-     * @return       BankCardListResponse or a single BankCardResponse
+     * @param token  the Authorization header (Bearer token)
+     * @param cardId (Optional) the unique identifier of a specific card
+     * @return the requested card(s) or a 404 Not Found if the specific ID is missing
      */
     @Operation(
             summary = "Get Bank Cards",
-            description = "Returns all cards or a specific one if cardId is provided")
+            description = "Retrieves all cards or a specific card based on path variables"
+    )
+    @ApiResponse(responseCode = "200", description = "Data retrieved successfully")
+    @ApiResponse(responseCode = "404", description = "Specific card ID not found")
     @GetMapping(
             value = {URL_BANK_CARD_DATA, URL_BANK_CARD_DATA_ID},
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getBankCards(@Parameter(hidden = true) @RequestHeader(name = AUTHORIZATION) String token,
                                           @PathVariable(name = "cardId", required = false) Long cardId) {
-
         String cleanToken = extractToken(token);
-
         if (cardId != null) {
             return mockService.getApiBankCardById(cleanToken, cardId)
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
         }
-
-        BankCardListResponse allCards = mockService.getApiBankCards(cleanToken);
-        return ResponseEntity.ok(allCards);
+        return ResponseEntity.ok(mockService.getApiBankCards(cleanToken));
     }
 
     /**
-     * Extracts the raw token string from the Authorization header.
-     * Uses case-insensitive prefix check for maximum reliability.
+     * Internal utility to strip the 'Bearer ' prefix from the Authorization header.
+     * Ensures only the raw token string is used for downstream service logic.
      *
-     * @param header full Authorization header value
-     * @return       cleaned token string
+     * @param header the full raw Authorization header value
+     * @return the cleaned token string
+     * @throws TokenValidationException if the header is null or does not follow Bearer format
      */
     public String extractToken(String header) {
         if (header == null || !header.startsWith("Bearer ")) {
-            throw new TokenValidationException("Invalid Authorization header format");
+            throw new TokenValidationException("Invalid Authorization header format. Expected: Bearer <token>");
         }
-        return header.substring(7);
+        return header.substring(7).trim();
     }
 }

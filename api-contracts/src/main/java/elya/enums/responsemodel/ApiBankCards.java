@@ -1,29 +1,33 @@
 package elya.enums.responsemodel;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.ToString;
+
 /**
- * Enumeration of JSON keys used in bank card API response structures.
- * Provides a centralized way to reference field names for parsing and mapping.
+ * Enumeration of top-level JSON keys used in bank card API response structures.
+ * <p>These constants define the structural hierarchy for card-related responses,
+ * ensuring consistent parsing between the emulator and its clients.</p>
  */
+@Getter
+@AllArgsConstructor
 public enum ApiBankCards {
+
+    /**
+     * The root JSON key for the primary response object.
+     */
     RESPONSE("response"),
+
+    /**
+     * The JSON key used for the collection of bank card entities within the response.
+     */
     CARDS("cards");
 
+    /**
+     * The literal string value of the JSON key.
+     */
     private final String key;
 
-    /**
-     * Initializes the enum constant with its corresponding JSON key string.
-     *
-     * @param key the literal string key used in the JSON response
-     */
-    ApiBankCards(String key) {
-        this.key = key;
-    }
-
-    /**
-     * Returns the string representation of the JSON key.
-     *
-     * @return the key value
-     */
     @Override
     public String toString() {
         return key;

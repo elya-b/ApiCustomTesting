@@ -9,6 +9,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * Unit tests for {@link elya.dto.bankcard.BankCardRequest}.
+ * <ul>
+ *   <li>{@code toDomain()} maps all DTO fields to the {@link elya.card.BankCard} domain model correctly</li>
+ * </ul>
+ */
 public class BankCardRequestTests {
 
     @Test

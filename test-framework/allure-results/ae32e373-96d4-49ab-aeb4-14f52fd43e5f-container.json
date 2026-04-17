@@ -1,0 +1,1 @@
+{"uuid":"ae32e373-96d4-49ab-aeb4-14f52fd43e5f","name":"deleteApiBankCardById() - Should successfully delete a specific card and return its ID","children":["7ae7131a-8035-4db4-aaa9-bd1834391b10"],"befores":[],"afters":[],"start":1776421690882,"stop":1776421694611}

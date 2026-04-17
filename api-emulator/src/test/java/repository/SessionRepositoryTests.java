@@ -13,9 +13,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
+
+/**
+ * Unit tests for {@link elya.repository.SessionRepository}.
+ * <ul>
+ *   <li>{@code save()} — persists the session and creates a file on disk</li>
+ *   <li>{@code delete()} — removes the session and updates the file</li>
+ *   <li>{@code clear()} — removes all sessions and deletes the file</li>
+ *   <li>{@code init()} — loads sessions from an existing file</li>
+ *   <li>{@code init()} — gracefully handles a corrupted JSON file</li>
+ *   <li>{@code find()} — returns an empty Optional for a non-existent token</li>
+ *   <li>{@code delete()} — does not throw when the token does not exist</li>
+ *   <li>{@code save()} — overwrites the existing session for the same token</li>
+ *   <li>{@code init()} — starts empty when the storage file does not exist</li>
+ *   <li>{@code delete()} — deleted session is not restored by a subsequent {@code init()} call</li>
+ * </ul>
+ */
 public class SessionRepositoryTests {
 
     private SessionRepository repository;
@@ -40,7 +55,6 @@ public class SessionRepositoryTests {
 
         repository.save(TOKEN, record);
 
-        // Assert
         assertTrue(repository.find(TOKEN).isPresent());
         File file = new File(fullPath);
         assertTrue(file.exists(), "Physical file must be created");
@@ -54,7 +68,6 @@ public class SessionRepositoryTests {
         repository.save(TOKEN, record);
         repository.delete(TOKEN);
 
-        // Assert
         assertTrue(repository.find(TOKEN).isEmpty());
         File file = new File(fullPath);
         assertTrue(file.exists(), "File should still exist but be empty");
@@ -72,11 +85,10 @@ public class SessionRepositoryTests {
 
         repository.clear();
 
-        // Assert
         assertTrue(repository.find(TOKEN).isEmpty());
         assertTrue(repository.find(TOKEN_2).isEmpty());
         File file = new File(fullPath);
-        assertTrue(file.exists(), "File should still exist but be empty");
+        assertFalse(file.exists(), "File should still exist but be empty");
     }
 
     @Test
@@ -92,9 +104,7 @@ public class SessionRepositoryTests {
 
         repository2.init();
 
-        // Assert
         Optional<TokenRecord> loadedRecord = repository2.find(TOKEN);
-
         assertTrue(loadedRecord.isPresent(), "Session should be restored from file");
         assertEquals(LOGIN, loadedRecord.get().login(), "Login should match the saved one");
     }
@@ -106,12 +116,67 @@ public class SessionRepositoryTests {
         Files.writeString(file.toPath(), "{ invalid_json: ... }");
 
         SessionRepository corruptedRepo = new SessionRepository(fullPath);
-
         corruptedRepo.init();
 
-        // Assert
         Optional<TokenRecord> loadedRecord = corruptedRepo.find(TOKEN);
-
         assertTrue(loadedRecord.isEmpty(), "Session should NOT be restored from file");
+    }
+
+    // --- ADDITIONAL CASES ---
+
+    @Test
+    @DisplayName("find() - Should return empty Optional for non-existent token")
+    void find_ShouldReturnEmpty_WhenTokenNotFound() {
+        Optional<TokenRecord> result = repository.find("nonexistent-token");
+
+        assertTrue(result.isEmpty(), "find() must return empty Optional for unknown token");
+    }
+
+    @Test
+    @DisplayName("delete() - Should not throw when token does not exist")
+    void delete_ShouldNotThrow_WhenTokenDoesNotExist() {
+        assertDoesNotThrow(() -> repository.delete("nonexistent-token"),
+                "delete() must not throw when the token is not present");
+    }
+
+    @Test
+    @DisplayName("save() - Should overwrite existing session for the same token")
+    void save_ShouldOverwrite_WhenTokenAlreadyExists() {
+        TokenRecord original  = new TokenRecord(LOGIN, TIME);
+        TokenRecord overwrite = new TokenRecord("updated_login", TIME + 1000);
+
+        repository.save(TOKEN, original);
+        repository.save(TOKEN, overwrite);
+
+        Optional<TokenRecord> result = repository.find(TOKEN);
+        assertTrue(result.isPresent());
+        assertEquals("updated_login", result.get().login(),
+                "Second save must overwrite the first for the same token");
+    }
+
+    @Test
+    @DisplayName("init() - Should start empty when storage file does not exist")
+    void init_ShouldStartEmpty_WhenFileDoesNotExist() {
+        assertFalse(new File(fullPath).exists(), "Precondition: file must not exist");
+
+        repository.init();
+
+        assertTrue(repository.find(TOKEN).isEmpty(),
+                "Repository must be empty when no file is present on startup");
+    }
+
+    @Test
+    @DisplayName("delete() - Deleted session must not be restored by subsequent init()")
+    void delete_SessionMustNotBeRestoredByInit() {
+        TokenRecord record = new TokenRecord(LOGIN, TIME);
+        repository.save(TOKEN, record);
+        repository.delete(TOKEN);
+
+        // Create a new repo pointing at the same file and call init()
+        SessionRepository freshRepo = new SessionRepository(fullPath);
+        freshRepo.init();
+
+        assertTrue(freshRepo.find(TOKEN).isEmpty(),
+                "Deleted session must not appear after re-loading from the updated file");
     }
 }

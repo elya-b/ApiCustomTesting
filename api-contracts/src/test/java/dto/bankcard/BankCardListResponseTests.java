@@ -11,6 +11,12 @@ import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * Unit tests for {@link elya.dto.bankcard.BankCardListResponse}.
+ * <ul>
+ *   <li>{@code of()} correctly wraps a card list into a response container and sets the size</li>
+ * </ul>
+ */
 public class BankCardListResponseTests {
 
     @Test

@@ -1,24 +1,29 @@
 package elya.restclient.constants.logs;
 
 /**
- * Base exception class for the REST client module.
- * Used to signal errors during API communication or data processing.
+ * Base unchecked exception for the REST client module.
+ * <p>Used to signal critical failures during remote API communication,
+ * data transformation, or unexpected server responses. Being a {@link RuntimeException},
+ * it allows for cleaner method signatures while still providing detailed error context.</p>
  */
 public class RestClientException extends RuntimeException {
+
     /**
-     * Constructs a new exception with the specified detail message.
+     * Constructs a new exception with a specific detail message.
      *
-     * @param message the detail error message
+     * @param message the descriptive error message.
      */
     public RestClientException(String message) {
         super(message);
     }
 
     /**
-     * Constructs a new exception with the specified detail message and cause.
+     * Constructs a new exception with a specific message and the underlying cause.
+     * <p>This constructor is particularly useful for wrapping lower-level exceptions
+     * like {@code IOException} or {@code JsonProcessingException}.</p>
      *
-     * @param message the detail error message
-     * @param cause   the cause of the exception (usually an IOException or Serialization error)
+     * @param message the descriptive error message.
+     * @param cause   the root cause of the failure (e.g., networking or serialization errors).
      */
     public RestClientException(String message, Throwable cause) {
         super(message, cause);

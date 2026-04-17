@@ -14,9 +14,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static elya.emulator.constants.logs.ApiErrorLogs.*;
+import static elya.emulator.constants.logs.ApiInfoLogs.*;
+
 /**
  * Repository for managing active emulator sessions.
- * Decoupled from business logic to allow future scaling (e.g., moving to Redis).
+ * Provides thread-safe in-memory storage with file-based persistence
+ * to ensure session continuity across application restarts.
+ * * <p>Designed to be decoupled from business logic to facilitate future migration
+ * to external storage solutions like Redis.</p>
  */
 @Slf4j
 @Component
@@ -24,19 +30,28 @@ public class SessionRepository {
     private final String storagePath;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public SessionRepository(@Value("${mock.storage.path:session.json}") String storagePath) {
-        this.storagePath = storagePath;
-    }
-
     /**
-     * Internal storage.
-     * Key: Token String,
-     * Value : TokenRecord  (login + expiry).
+     * Internal thread-safe storage for active sessions.
+     * <ul>
+     * <li>Key: Unique token string</li>
+     * <li>Value: {@link TokenRecord} containing user login and expiration timestamp</li>
+     * </ul>
      */
     private final Map<String, TokenRecord> activeSessions = new ConcurrentHashMap<>();
 
     /**
-     * Loads existing sessions from the file system on startup.
+     * Initializes the repository with a configurable storage path.
+     *
+     * @param storagePath filesystem path to the JSON file where sessions are persisted.
+     * Defaults to 'session.json' if not explicitly configured.
+     */
+    public SessionRepository(@Value("${session.storage.path:session.json}") String storagePath) {
+        this.storagePath = storagePath;
+    }
+
+    /**
+     * Synchronizes the in-memory state with the file system upon application startup.
+     * If the persistence file exists, it is deserialized into the active sessions map.
      */
     @PostConstruct
     public void init() {
@@ -45,17 +60,18 @@ public class SessionRepository {
             try {
                 Map<String, TokenRecord> loaded = objectMapper.readValue(file, new TypeReference<>() {});
                 activeSessions.putAll(loaded);
-                log.info("Loaded {} sessions from persistence storage.", activeSessions.size());
+                log.info(LOADED_SESSIONS_FROM_STORAGE, activeSessions.size());
             } catch (IOException e) {
-                log.error("Failed to load sessions from file", e);
+                log.error(FAILED_LOAD_SESSION_FROM_FILE, e);
             }
         }
     }
 
     /**
-     * Saves a new session or updates an existing one.
-     * @param token  unique session identifier (key)
-     * @param record object containing login and expiry time (value)
+     * Registers a new session or updates an existing one in both memory and disk storage.
+     *
+     * @param token  unique session identifier (Auth Token)
+     * @param record {@link TokenRecord} containing metadata like login and expiry time
      */
     public void save(String token, TokenRecord record) {
         activeSessions.put(token, record);
@@ -63,18 +79,19 @@ public class SessionRepository {
     }
 
     /**
-     * Retrieves session data by its token.
-     * @param token unique session identifier to search for
-     * @return an Optional containing the record if found, otherwise empty
+     * Retrieves session data associated with the provided token.
+     *
+     * @param token unique session identifier to look up
+     * @return an {@link Optional} containing the record if found, otherwise an empty Optional
      */
     public Optional<TokenRecord> find(String token) {
         return Optional.ofNullable(activeSessions.get(token));
     }
 
     /**
-     * Removes a session and updates the persistence file.
+     * Permanently removes a session from memory and updates the persistence file.
      *
-     * @param token session identifier to delete
+     * @param token session identifier to be invalidated and deleted
      */
     public void delete(String token) {
         activeSessions.remove(token);
@@ -82,21 +99,31 @@ public class SessionRepository {
     }
 
     /**
-     * Synchronizes the in-memory map to the JSON storage file.
+     * Flushes the current in-memory session map to the JSON storage file.
+     * This method is synchronized to ensure atomic write operations and prevent data corruption.
      */
     private synchronized void saveToFile() {
         try {
-            objectMapper.writeValue(new File(storagePath), activeSessions);
+            File file = new File(storagePath);
+            File parentDir = file.getParentFile();
+            if (parentDir != null) {
+                parentDir.mkdirs();
+            }
+            objectMapper.writeValue(file, activeSessions);
         } catch (IOException e) {
-            log.error("Failed to save sessions to persistence storage", e);
+            log.error(FAILED_SAVE_SESSION_TO_STORAGE, e);
         }
     }
 
     /**
-     * Clears all sessions from memory and disk.
+     * Wipes all active sessions from both memory and the physical storage file.
+     * Primarily used for system resets or full cleanup operations.
      */
     public void clear() {
         activeSessions.clear();
-        saveToFile();
+        File file = new File(storagePath);
+        if (file.exists()) {
+            file.delete();
+        }
     }
 }

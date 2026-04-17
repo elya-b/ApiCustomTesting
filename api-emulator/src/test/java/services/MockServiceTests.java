@@ -24,6 +24,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests (Mockito) for {@link elya.services.MockService}.
+ * <ul>
+ *   <li>{@code getApiBankCards()} — returns a card list for a valid token</li>
+ *   <li>{@code getApiBankCards()} — returns an empty response when no mock is found</li>
+ *   <li>{@code getApiBankCards()} — propagates TokenValidationException for an invalid token</li>
+ *   <li>{@code getApiBankCardById()} — card found by ID</li>
+ *   <li>{@code getApiBankCardById()} — returns an empty Optional when the card is not found</li>
+ *   <li>{@code clearMockResponse()} — successfully clears the mock</li>
+ *   <li>{@code clearMockResponse()} — returns false when the repository fails to clear</li>
+ *   <li>{@code deleteApiBankCardById()} — deletes the card and returns its ID</li>
+ *   <li>{@code deleteApiBankCardById()} — returns empty Optional when the ID is not found</li>
+ *   <li>{@code setMockResponse()} — appends cards with incremented IDs</li>
+ *   <li>{@code setMockResponse()} — first cards are assigned IDs starting from 1</li>
+ *   <li>{@code setMockResponse()} — null request saves an empty response</li>
+ *   <li>{@code setMockResponse()} — new ID equals Max ID + 1 even when there are gaps</li>
+ *   <li>{@code setMockResponse()} — empty card list saves an empty response</li>
+ *   <li>{@code getApiBankCardById()} — propagates TokenValidationException</li>
+ *   <li>{@code deleteApiBankCardById()} — propagates TokenValidationException</li>
+ *   <li>{@code setMockResponse()} — does not call tokenManagerService directly (validation is delegated)</li>
+ * </ul>
+ */
 @ExtendWith(MockitoExtension.class)
 public class MockServiceTests {
     @Mock
@@ -47,40 +69,31 @@ public class MockServiceTests {
     @Test
     @DisplayName("Successful. Valid token")
     void getApiBankCards_Success() {
-        // Stubbing: when find() is called with our token, return the mock data
         when(mockRepository.find(TOKEN)).thenReturn(Optional.of(CARD_LIST_RESPONSE));
 
-        // Act
         BankCardListResponse result = mockService.getApiBankCards(TOKEN);
         List<BankCardResponse> finalResult = result.getResponse().getCards();
 
-        // Assert
         assertFalse(finalResult.isEmpty(), "Result list should not be empty");
         assertEquals(1, finalResult.size());
         assertEquals(CARD_ID, finalResult.getFirst().getCardId());
 
-        // Verify that security check was performed
         verify(tokenManagerService, times(1)).validateAuthToken(TOKEN);
     }
 
     @Test
     @DisplayName("Successful. Return empty response")
     void getApiBankCards_EmptyResponse() {
-        // Stubbing
         doNothing().when(tokenManagerService).validateAuthToken(TOKEN);
 
-        // Simulate that repository returns NOTHING (empty Optional)
         when(mockRepository.find(TOKEN)).thenReturn(Optional.empty());
 
-        // Act
         BankCardListResponse result = mockService.getApiBankCards(TOKEN);
         List<BankCardResponse> finalResult = result.getResponse().getCards();
 
-        // Assert
         assertNotNull(finalResult, "Result should never be null");
         assertTrue(finalResult.isEmpty(), "Result list should be empty");
 
-        // Verify
         verify(tokenManagerService).validateAuthToken(TOKEN);
         verify(mockRepository).find(TOKEN);
     }
@@ -88,16 +101,13 @@ public class MockServiceTests {
     @Test
     @DisplayName("Failed. Invalid token")
     void getApiBankCards_InvalidToken() {
-        // Stubbing: when find() is called with our token, return the mock data
         doThrow(new TokenValidationException(AUTH_TOKEN_VALIDATION_FAILED))
                 .when(tokenManagerService).validateAuthToken(TOKEN);
 
-        // Act & Assert: Check that the exception is thrown when calling the service
         assertThrows(TokenValidationException.class, () ->
                 mockService.getApiBankCards(TOKEN)
         );
 
-        // Verify that security check was performed
         verify(tokenManagerService).validateAuthToken(TOKEN);
         verify(mockRepository, never()).find(TOKEN);
     }
@@ -108,33 +118,23 @@ public class MockServiceTests {
     @Test
     @DisplayName("Successful. Card found by ID")
     void getApiBankCardById_Success() {
-        // Stubbing
         when(mockRepository.find(TOKEN)).thenReturn(Optional.of(CARD_LIST_RESPONSE));
 
-        // Act
         Optional<BankCardResponse> result = mockService.getApiBankCardById(TOKEN, CARD_ID);
 
-        // Assert
         assertTrue(result.isPresent(), "Result should not be null");
         assertEquals(CARD_ID, result.get().getCardId());
-
-        // Verify that security check was performed
         verify(tokenManagerService).validateAuthToken(TOKEN);
     }
 
     @Test
     @DisplayName("Failed. Card was NOT found by ID")
     void getApiBankCardById_Failed() {
-        // Stubbing
         when(mockRepository.find(TOKEN)).thenReturn(Optional.empty());
 
-        // Act
         Optional<BankCardResponse> result = mockService.getApiBankCardById(TOKEN, CARD_ID);
 
-        // Assert
         assertTrue(result.isEmpty(), "Result should be empty Optional");
-
-        // Verify that security check was performed
         verify(tokenManagerService).validateAuthToken(TOKEN);
     }
 
@@ -143,32 +143,22 @@ public class MockServiceTests {
     @Test
     @DisplayName("Successful. Response is cleared")
     void clearMockResponse_Success() {
-        // Stubbing
         when(mockRepository.clear(TOKEN)).thenReturn(true);
 
-        // Act
         boolean result = mockService.clearMockResponse(TOKEN);
 
-        // Assert
         assertTrue(result, "Mock response was cleared");
-
-        // Verify
         verify(mockRepository).clear(TOKEN);
     }
 
     @Test
     @DisplayName("Failed. Repository failed to clear data")
     void clearMockResponse_Failed() {
-        // Stubbing: when find() is called with our token, return the mock data
         when(mockRepository.clear(TOKEN)).thenReturn(false);
 
-        // Act
         boolean result = mockService.clearMockResponse(TOKEN);
 
-        // Assert
         assertFalse(result, "Service should return false if repository failed to clear");
-
-        // Verify that security check was performed once
         verify(mockRepository).clear(TOKEN);
     }
 
@@ -181,20 +171,16 @@ public class MockServiceTests {
         BankCardResponse card2 = BankCardResponse.builder().cardId(CARD_ID_2).build();
         BankCardListResponse existingMock = BankCardListResponse.of(List.of(card1, card2));
 
-        // Stubbing
         when(mockRepository.find(TOKEN)).thenReturn(Optional.of(existingMock));
         when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
 
-        // Act
         Optional<Long> result = mockService.deleteApiBankCardById(TOKEN, CARD_ID);
 
-        // Assert
         assertAll("Check delete result",
                 () -> assertTrue(result.isPresent(), "Result should not be empty"),
                 () -> assertEquals(CARD_ID, result.get(), "Should return the ID of deleted card")
         );
 
-        // Verify
         verify(mockRepository).save(eq(TOKEN), argThat(savedResponse ->
                 savedResponse.getResponse().getCards().size() == 1 &&
                         savedResponse.getResponse().getCards().getFirst().getCardId().equals(CARD_ID_2)
@@ -204,16 +190,11 @@ public class MockServiceTests {
     @Test
     @DisplayName("Failed. Card was not deleted. ID is not found")
     void deleteApiBankCardById_Failed() {
-        // Stubbing
         when(mockRepository.find(TOKEN)).thenReturn(Optional.of(CARD_LIST_RESPONSE));
 
-        // Act
         Optional<Long> result = mockService.deleteApiBankCardById(TOKEN, CARD_ID_2);
 
-        // Assert
         assertTrue(result.isEmpty(), "Result should be empty because ID was not found");
-
-        // Verify
         verify(mockRepository, never()).save(anyString(), any());
     }
 
@@ -222,16 +203,13 @@ public class MockServiceTests {
     @Test
     @DisplayName("Successful. Set mock response with ID increment")
     void setMockResponse_IncrementId() {
-        // Prepare request with two new cards
         BankCardListRequest request = BankCardListRequest.of(List.of(CARD_REQUEST, CARD_REQUEST));
 
         when(mockRepository.find(TOKEN)).thenReturn(Optional.of(CARD_LIST_RESPONSE));
         when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
 
-        // ACT
         BankCardListResponse result = mockService.setMockResponse(TOKEN, request);
 
-        // ASSERT & VERIFY
         assertNotNull(result);
 
         verify(mockRepository).save(eq(TOKEN), argThat(savedResponse -> {
@@ -246,14 +224,11 @@ public class MockServiceTests {
     @Test
     @DisplayName("Successful. First cards get ID starting from 1")
     void setMockResponse_FirstCards() {
-        // Stubbing
         when(mockRepository.find(TOKEN)).thenReturn(Optional.empty());
         when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
 
-        // Act
         mockService.setMockResponse(TOKEN, DEFAULT_LIST_REQUEST);
 
-        // Verify
         verify(mockRepository).save(eq(TOKEN), argThat(savedResponse ->
                 savedResponse.getResponse().getCards().getFirst().getCardId()
                         .equals(CARD_ID)));
@@ -264,10 +239,8 @@ public class MockServiceTests {
     void setMockResponse_ShouldHandleNullRequest() {
         when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
 
-        // ACT
         BankCardListResponse result = mockService.setMockResponse(TOKEN, null);
 
-        // ASSERT
         assertNotNull(result);
         assertTrue(result.getResponse().getCards().isEmpty());
 
@@ -288,7 +261,6 @@ public class MockServiceTests {
 
         mockService.setMockResponse(TOKEN, DEFAULT_LIST_REQUEST);
 
-        // Verify that the new card gets ID 6 (5 + 1)
         verify(mockRepository).save(eq(TOKEN), argThat(res ->
                 res.getResponse().getCards().get(2).getCardId() == 6L
         ));
@@ -297,22 +269,56 @@ public class MockServiceTests {
     @Test
     @DisplayName("Successful. Should save empty response when cards list in request is null")
     void setMockResponse_ShouldHandleNullCardsList() {
-        // Request is not null, but cards list is null
         BankCardListRequest request = BankCardListRequest.of(Collections.emptyList());
-
-        // Stubbing
         when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
 
-        // Act
         BankCardListResponse result = mockService.setMockResponse(TOKEN, request);
-
-        // Assert && Verify
 
         assertNotNull(result);
         assertThat(result.getResponse().getCards()).isEmpty();
-
         verify(mockRepository).save(
                 eq(TOKEN), argThat(res -> res.getResponse().getCards().isEmpty())
         );
+    }
+
+    // --- TOKEN VALIDATION PROPAGATION ---
+
+    @Test
+    @DisplayName("Failed. getApiBankCardById() propagates TokenValidationException from getApiBankCards()")
+    void getApiBankCardById_PropagatesTokenValidationException() {
+        doThrow(new TokenValidationException(AUTH_TOKEN_VALIDATION_FAILED))
+                .when(tokenManagerService).validateAuthToken(TOKEN);
+
+        assertThrows(TokenValidationException.class, () ->
+                mockService.getApiBankCardById(TOKEN, CARD_ID)
+        );
+
+        verify(tokenManagerService).validateAuthToken(TOKEN);
+        verify(mockRepository, never()).find(anyString());
+    }
+
+    @Test
+    @DisplayName("Failed. deleteApiBankCardById() propagates TokenValidationException from getApiBankCards()")
+    void deleteApiBankCardById_PropagatesTokenValidationException() {
+        doThrow(new TokenValidationException(AUTH_TOKEN_VALIDATION_FAILED))
+                .when(tokenManagerService).validateAuthToken(TOKEN);
+
+        assertThrows(TokenValidationException.class, () ->
+                mockService.deleteApiBankCardById(TOKEN, CARD_ID)
+        );
+
+        verify(tokenManagerService).validateAuthToken(TOKEN);
+        verify(mockRepository, never()).find(anyString());
+    }
+
+    @Test
+    @DisplayName("Successful. setMockResponse() does NOT call tokenManagerService directly")
+    void setMockResponse_DoesNotCallTokenValidation() {
+        when(mockRepository.find(TOKEN)).thenReturn(Optional.empty());
+        when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
+
+        mockService.setMockResponse(TOKEN, DEFAULT_LIST_REQUEST);
+
+        verify(tokenManagerService, times(1)).validateAuthToken(TOKEN);
     }
 }

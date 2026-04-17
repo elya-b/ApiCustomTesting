@@ -12,6 +12,8 @@ import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardRequest;
 import elya.dto.bankcard.BankCardResponse;
 import elya.interfaces.IRestClientApi;
+import elya.repository.MockRepository;
+import elya.repository.SessionRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
@@ -38,20 +40,29 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
 /**
  * Orchestrator for managing the API Emulator lifecycle within the testing framework.
- * It utilizes {@link ApiEmulatorRunner} for startup and handles high-level initialization
- * such as health monitoring and initial authentication.
+ * <p>This manager is responsible for:
+ * <ul>
+ * <li>Starting and stopping the emulator process via {@link ApiEmulatorRunner}.</li>
+ * <li>Monitoring the emulator health status using Spring Boot Actuator.</li>
+ * <li>Handling initial authentication and session token storage.</li>
+ * <li>Providing high-level methods for data seeding (mocking bank cards).</li>
+ * </ul>
+ * </p>
  */
 @Slf4j
 @Component
 public class EmulatorLifecycleManager {
+
     /**
      * The base URL of the running emulator instance (e.g., http://localhost:8080).
+     * Populated dynamically after the runner starts.
      */
     @Getter
     private String url;
 
     /**
      * The authentication token obtained during the startup sequence.
+     * Used for subsequent authorized mock configurations.
      */
     @Getter
     private String authToken;
@@ -62,15 +73,15 @@ public class EmulatorLifecycleManager {
     private final RestTemplate restTemplate;
 
     /**
-     * Initializes the manager with a runner set to use a random port (0).
+     * Constructs the manager and binds it to a fixed port runner.
      *
-     * @param restClient   The implementation of {@link IRestClientApi} for HTTP interactions.
-     * @param objectMapper The Jackson mapper for DTO serialization/deserialization.
+     * @param restClient   low-level client for API interactions.
+     * @param objectMapper Jackson mapper for data conversion.
+     * @param restTemplate template for health check polling.
      */
-    public EmulatorLifecycleManager(
-                                        IRestClientApi restClient,
-                                        ObjectMapper objectMapper,
-                                        RestTemplate restTemplate) {
+    public EmulatorLifecycleManager(IRestClientApi restClient,
+                                    ObjectMapper objectMapper,
+                                    RestTemplate restTemplate) {
         this.runner = new ApiEmulatorRunner(8080);
         this.restClient = restClient;
         this.objectMapper = objectMapper;
@@ -78,7 +89,8 @@ public class EmulatorLifecycleManager {
     }
 
     /**
-     * Performs post-construction logging of the manager's configuration.
+     * Lifecycle callback executed after dependency injection.
+     * Logs the manager initialization.
      */
     @PostConstruct
     public void init() {
@@ -86,12 +98,16 @@ public class EmulatorLifecycleManager {
     }
 
     /**
-     * Orchestrates the full startup sequence: triggers the technical runner,
-     * resolves dynamic URL, waits for the service to be healthy, and performs
-     * initial authentication to store a valid session token.
+     * Triggers the full emulator startup sequence.
+     * <ol>
+     * <li>Starts the process.</li>
+     * <li>Configures the base URL for the rest client.</li>
+     * <li>Polls the health endpoint until "UP".</li>
+     * <li>Authenticates and stores the token.</li>
+     * </ol>
      *
-     * @param authRequest The object containing credentials (login and password)
-     * for automatic token generation during startup.
+     * @param authRequest credentials for initial login.
+     * @throws RuntimeException if startup, health check, or login fails.
      */
     public void start(AuthRequest authRequest) {
         runner.start();
@@ -101,37 +117,46 @@ public class EmulatorLifecycleManager {
         if (restClient instanceof RestClientApiEngine engine) {
             engine.setBaseUrl(this.url);
         }
-
         waitUntilReady(Duration.ofSeconds(30));
 
+        runner.getBean(SessionRepository.class).clear();
+        runner.getBean(MockRepository.class).clearAll();
+
         this.authToken = performLogin(authRequest);
-        log.info("Emulator started and authenticated. Token obtained.");
+        log.info("Emulator startup complete. Service is healthy and authenticated.");
     }
 
     /**
-     * Gracefully terminates the emulator instance by delegating to the runner.
+     * Gracefully shuts down the emulator process.
+     * Invoked automatically by the Spring container on shutdown.
      */
     @PreDestroy
     public void stop() {
+        if (runner.isRunning()) {
+            runner.getBean(SessionRepository.class).clear();
+            runner.getBean(MockRepository.class).clearAll();
+        }
         runner.stop();
+        log.info("Emulator process terminated.");
     }
 
     /**
-     * Obtains a valid session token by performing a REST login request.
+     * Internal method to perform authentication against the newly started emulator.
      *
-     * @param authRequest The object containing user credentials.
-     * @return String representing the generated authentication token.
-     * @throws IllegalStateException if the authentication fails or the response structure is invalid.
-     * @throws RuntimeException      if an error occurs during JSON serialization or mapping.
+     * @param authRequest user credentials.
+     * @return a valid JWT or session token.
+     * @throws IllegalStateException if the token cannot be generated.
      */
     private String performLogin(AuthRequest authRequest) {
         AuthResponse response;
         try {
             JsonNode body = objectMapper.valueToTree(authRequest);
             JsonNode responseNode = restClient.post(this.url + URL_TOKEN, body, Map.of());
+            log.info("performLogin response: {}", responseNode);
             response = objectMapper.treeToValue(responseNode, AuthResponse.class);
         } catch (Exception e) {
-            throw new RuntimeException("Mapping error during token generation", e);
+            log.error("Authentication failed: {}", e.getMessage());
+            throw new RuntimeException("Critical mapping error during token generation", e);
         }
 
         if (response != null && response.getSuccess() && response.getData() != null) {
@@ -141,16 +166,22 @@ public class EmulatorLifecycleManager {
         }
     }
 
+    /**
+     * Seeds the emulator with a predefined list of bank cards for mocking.
+     * <p>Translates domain {@link BankCard} entities into DTOs and performs an authorized POST.</p>
+     *
+     * @param token authentication token.
+     * @param cards domain cards to be mocked.
+     * @return the list of cards as confirmed by the emulator.
+     */
     public List<BankCard> addBankCards(String token, List<BankCard> cards) {
         List<BankCardRequest> dtos = cards.stream()
                 .map(BankCardRequest::fromDomain)
                 .collect(Collectors.toList());
-        BankCardListRequest requestBody = BankCardListRequest.of(dtos);
 
         Map<String, String> headers = Map.of(AUTHORIZATION, BEARER + token);
-        JsonNode responseNode = restClient.post(url + URL_BANK_CARD_MOCK, objectMapper.valueToTree(requestBody), headers);
-
-        log.info("Emulator seeded successfully. Response: {}", responseNode.toPrettyString());
+        JsonNode responseNode = restClient.post(url + URL_BANK_CARD_DATA,
+                objectMapper.valueToTree(BankCardListRequest.of(dtos)), headers);
 
         JsonNode cardsNode = responseNode.path(RESPONSE.toString()).path(CARDS.toString());
         List<BankCardResponse> resultDtos = objectMapper.convertValue(cardsNode, new TypeReference<>() {});
@@ -161,24 +192,20 @@ public class EmulatorLifecycleManager {
     }
 
     /**
-     * Fetches bank cards from the emulator and converts them into the internal domain model.
+     * Retrieves the current list of cards from the emulator.
      *
-     * @param token The authorization token.
-     * @return A list of {@link BankCard} domain objects.
+     * @param token authentication token.
+     * @return a list of {@link BankCard} objects.
      */
     public List<BankCard> getBankCards(String token) {
         try {
             Map<String, String> headers = Map.of(AUTHORIZATION, BEARER + token);
             JsonNode responseNode = restClient.get(url + URL_BANK_CARD_DATA, headers);
 
-            if (responseNode == null || responseNode.isMissingNode()) {
-                return List.of();
-            }
+            JsonNode cardsNode = responseNode.path(RESPONSE.toString()).path(CARDS.toString());
+            if (cardsNode.isMissingNode()) return List.of();
 
-            var dtos = objectMapper.readValue(
-                    responseNode.traverse(),
-                    new TypeReference<List<BankCardResponse>>() {}
-            );
+            List<BankCardResponse> dtos = objectMapper.convertValue(cardsNode, new TypeReference<>() {});
             return dtos.stream()
                     .map(BankCardResponse::getBankCard)
                     .collect(Collectors.toList());
@@ -189,25 +216,25 @@ public class EmulatorLifecycleManager {
     }
 
     /**
-     * Polls the Emulator's health actuator until it returns an OK status or the timeout is reached.
-     * Ensures that the application is fully initialized before tests begin execution.
+     * Actuator-based polling logic.
+     * <p>Wait for the service to return HTTP 200 on the /health endpoint.
+     * Uses exponential backoff (fixed 500ms) until timeout.</p>
      *
-     * @param timeout The maximum duration to wait for the application to become ready.
-     * @throws RuntimeException if the emulator fails to start or is interrupted.
+     * @param timeout max duration to wait.
      */
     private void waitUntilReady(Duration timeout) {
         Instant deadline = Instant.now().plus(timeout);
         String healthUrl = url + "/actuator/health";
+
         while (Instant.now().isBefore(deadline)) {
             try {
-                ResponseEntity<String> response = restTemplate.getForEntity(healthUrl,
-                        String.class);
+                ResponseEntity<String> response = restTemplate.getForEntity(healthUrl, String.class);
                 if (response.getStatusCode() == HttpStatus.OK) {
                     log.info(EMULATOR_IS_READY);
                     return;
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception ignored) {
+                // Service not yet available, continue polling
             }
             try {
                 Thread.sleep(500);
@@ -216,6 +243,6 @@ public class EmulatorLifecycleManager {
                 throw new RuntimeException(INTERRUPTED_EMULATOR_STARTUP, e);
             }
         }
-        throw new RuntimeException(FAILED_TO_START_EMULATOR + timeout);
+        throw new RuntimeException(FAILED_TO_START_EMULATOR + timeout.toSeconds() + " seconds");
     }
 }

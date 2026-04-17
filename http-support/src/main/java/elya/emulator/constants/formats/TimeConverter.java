@@ -6,16 +6,20 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Interface providing temporal formatting capabilities.
- * Designed as a mix-in to allow any service to format timestamps without direct dependencies.
+ * Interface providing flexible temporal formatting capabilities.
+ * <p>Designed as a mix-in component, it allows services to convert epoch-based
+ * timestamps into human-readable strings using either custom or standardized patterns.</p>
  */
 public interface TimeConverter {
 
     /**
-     * Formats epoch milliseconds into a string based on a specific pattern.
-     * @param millis  The timestamp in milliseconds since Unix epoch.
-     * @param pattern The date-time pattern string (e.g., yyyy-MM-dd).
-     * @return A formatted date-time string.
+     * Formats epoch milliseconds into a string representation based on the provided pattern.
+     * <p>The conversion is performed using the system's default time zone.</p>
+     *
+     * @param millis  the timestamp in milliseconds since the Unix epoch.
+     * @param pattern the date-time pattern string to be used for formatting.
+     * @return a formatted date-time string.
+     * @throws java.time.format.DateTimeParseException if the pattern is invalid.
      */
     default String formatWithPattern(long millis, String pattern) {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault())
@@ -23,9 +27,12 @@ public interface TimeConverter {
     }
 
     /**
-     * Formats epoch milliseconds using the project's standard date-time pattern.
-     * @param millis The timestamp in milliseconds since Unix epoch.
-     * @return A string formatted according to DateTimeConstants.DATE_TIME_PATTERN.
+     * Formats epoch milliseconds using the project's predefined standard date-time pattern.
+     * <p>Relies on {@link DateTimeConstants#DATE_TIME_PATTERN} for consistency
+     * across the application.</p>
+     *
+     * @param millis the timestamp in milliseconds since the Unix epoch.
+     * @return a string formatted according to the standard system pattern.
      */
     default String formatToStandard(long millis) {
         return formatWithPattern(millis, DateTimeConstants.DATE_TIME_PATTERN);

@@ -38,6 +38,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Unit tests (WebMvcTest) for {@link elya.ApiEmulatorController}.
+ * <ul>
+ *   <li>GET /bank-cards/data — returns a list of cards (200)</li>
+ *   <li>GET /bank-cards/data — returns an empty list (200)</li>
+ *   <li>GET /bank-cards/data/{cardId} — card found (200)</li>
+ *   <li>GET /bank-cards/data/{cardId} — card not found (404)</li>
+ *   <li>DELETE /bank-cards/data — mock cleared successfully (200)</li>
+ *   <li>DELETE /bank-cards/data/{cardId} — card deleted (200)</li>
+ *   <li>DELETE /bank-cards/data/{cardId} — card not found (404)</li>
+ *   <li>POST /bank-cards/data — mock set successfully (200, card fields validated)</li>
+ *   <li>POST /bank-cards/data — empty card list returns size=0 (200)</li>
+ *   <li>POST /bank-cards/data — missing request body (400)</li>
+ *   <li>POST /bank-cards/data — missing Authorization header (400)</li>
+ *   <li>POST /bank-cards/data — invalid token format (401)</li>
+ *   <li>POST /token — token generated successfully (200)</li>
+ *   <li>POST /token — invalid credentials (401)</li>
+ * </ul>
+ */
 @WebMvcTest(ApiEmulatorController.class)
 @ContextConfiguration(classes = ApiEmulator.class)
 public class ApiEmulatorControllerTests {
@@ -61,20 +80,18 @@ public class ApiEmulatorControllerTests {
     private static final String FULL_URL_BANK_CARD_DATA = URL_BANK_CARD_DATA + "/" + CARD_ID;
     private static final AuthRequest AUTH_REQUEST = new AuthRequest("login", "password");
     private static final BankCardResponse DEFAULT_CARD_RESPONSE = BankCardResponse.builder()
-                                                                                    .cardId(CARD_ID)
-                                                                                    .cardNumber(CARD_NUMBER)
-                                                                                    .cardType(CardType.DEBIT)
-                                                                                    .currency(Currency.EUR)
-                                                                                    .build();
+            .cardId(CARD_ID)
+            .cardNumber(CARD_NUMBER)
+            .cardType(CardType.DEBIT)
+            .currency(Currency.EUR)
+            .build();
     private static final BankCardListResponse DEFAULT_CARD_LIST_RESPONSE = BankCardListResponse.of(List.of(DEFAULT_CARD_RESPONSE));
 
     @Test
     @DisplayName("GET " + URL_BANK_CARD_DATA + " - Success")
     void getBankCards_ShouldReturnList() throws Exception {
-        // Stubbing: expecting the cleaned token
         when(mockService.getApiBankCards(CLEAN_TOKEN)).thenReturn(DEFAULT_CARD_LIST_RESPONSE);
 
-        // ACT & ASSERT
         mockMvc.perform(get(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isOk())
@@ -88,11 +105,8 @@ public class ApiEmulatorControllerTests {
     @Test
     @DisplayName("GET " + URL_BANK_CARD_DATA + " - Success, but empty list")
     void getBankCards_ShouldReturnEmptyList() throws Exception {
-
-        // Stubbing: service returns an empty list for the CORRECT token
         when(mockService.getApiBankCards(CLEAN_TOKEN)).thenReturn(BankCardListResponse.of(Collections.emptyList()));
 
-        // ACT & ASSERT
         mockMvc.perform(get(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isOk())
@@ -103,10 +117,8 @@ public class ApiEmulatorControllerTests {
     @Test
     @DisplayName("GET " + URL_BANK_CARD_DATA + "/{cardId} - Success")
     void getBankCardById_ShouldReturn200() throws Exception {
-        // We tell the mock to return an empty Optional
         when(mockService.getApiBankCardById(CLEAN_TOKEN, CARD_ID)).thenReturn(Optional.of(DEFAULT_CARD_RESPONSE));
 
-        // ACT & ASSERT
         mockMvc.perform(get(FULL_URL_BANK_CARD_DATA) // Requesting specific ID
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isOk()) // Expecting 200
@@ -117,23 +129,20 @@ public class ApiEmulatorControllerTests {
     @Test
     @DisplayName("GET " + URL_BANK_CARD_DATA + "/{cardId} - Not Found")
     void getBankCardById_ShouldReturn404() throws Exception {
-
-        // Stubbing: service returns Optional.empty()
         when(mockService.getApiBankCardById(CLEAN_TOKEN, CARD_ID)).thenReturn(Optional.empty());
 
-        // ACT & ASSERT
         mockMvc.perform(get(FULL_URL_BANK_CARD_DATA) // Requesting specific ID
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isNotFound()); // Expecting 404 instead of 200
     }
 
     @Test
-    @DisplayName("DELETE " + URL_BANK_CARD_MOCK + " - Success")
+    @DisplayName("DELETE " + URL_BANK_CARD_DATA + " - Success")
     void clearMockResponse_ShouldReturn200() throws Exception {
 
         when(mockService.clearMockResponse(CLEAN_TOKEN)).thenReturn(true);
 
-        mockMvc.perform(delete(URL_BANK_CARD_MOCK)
+        mockMvc.perform(delete(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value(true))
@@ -146,7 +155,6 @@ public class ApiEmulatorControllerTests {
 
         when(mockService.deleteApiBankCardById(CLEAN_TOKEN, CARD_ID)).thenReturn(Optional.of(CARD_ID));
 
-        // ACT & ASSERT
         mockMvc.perform(delete(FULL_URL_BANK_CARD_DATA) // Requesting specific ID
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isOk()) // Expecting 200
@@ -156,19 +164,16 @@ public class ApiEmulatorControllerTests {
     @Test
     @DisplayName("DELETE " + URL_BANK_CARD_DATA + "/{cardId} - Not Found")
     void deleteApiBankCardById_ShouldReturn404() throws Exception {
-
-        // Stubbing: service returns Optional.empty()
         when(mockService.deleteApiBankCardById(CLEAN_TOKEN, CARD_ID))
                 .thenReturn(Optional.empty());
 
-        // ACT & ASSERT
         mockMvc.perform(delete(FULL_URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isNotFound()); // Expecting 404 instead of 200
     }
 
     @Test
-    @DisplayName("POST " + URL_BANK_CARD_MOCK + " - Success")
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Success")
     void setMockResponse_ShouldReturnList() throws Exception {
 
         BankCardRequest cardDto = BankCardRequest.builder()
@@ -191,7 +196,7 @@ public class ApiEmulatorControllerTests {
 
         when(mockService.getApiBankCards(CLEAN_TOKEN)).thenReturn(DEFAULT_CARD_LIST_RESPONSE);
 
-        mockMvc.perform(post(URL_BANK_CARD_MOCK)
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN)
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestWrapper)))
@@ -216,7 +221,7 @@ public class ApiEmulatorControllerTests {
     }
 
     @Test
-    @DisplayName("POST " + URL_BANK_CARD_MOCK + " - Handle Save Failure")
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Handle Save Failure")
     void setMockResponse_ShouldReturnList_EvenIfSaveFails() throws Exception {
         BankCardListRequest requestWrapper = BankCardListRequest.of(Collections.emptyList());
 
@@ -225,7 +230,7 @@ public class ApiEmulatorControllerTests {
 
         when(mockService.getApiBankCards(CLEAN_TOKEN)).thenReturn(BankCardListResponse.of(Collections.emptyList()));
 
-        mockMvc.perform(post(URL_BANK_CARD_MOCK)
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN)
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestWrapper)))
@@ -234,33 +239,33 @@ public class ApiEmulatorControllerTests {
     }
 
     @Test
-    @DisplayName("POST " + URL_BANK_CARD_MOCK + " - Null Body")
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Null Body")
     void setMockResponse_ShouldHandleNullBody() throws Exception {
 
-        mockMvc.perform(post(URL_BANK_CARD_MOCK)
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN)
                         .contentType(APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("POST " + URL_BANK_CARD_MOCK + " - Missing Authorization Header")
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Missing Authorization Header")
     void setMockResponse_ShouldReturn400_WhenHeaderIsMissing() throws Exception {
         BankCardListRequest requestWrapper = BankCardListRequest.of(Collections.emptyList());
 
-        mockMvc.perform(post(URL_BANK_CARD_MOCK)
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestWrapper)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("POST " + URL_BANK_CARD_MOCK + " - Invalid Token Format")
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Invalid Token Format")
     void setMockResponse_ShouldHandleInvalidToken() throws Exception {
         String badHeader = "InvalidPrefix token123";
         BankCardListRequest requestWrapper = BankCardListRequest.of(Collections.emptyList());
 
-        mockMvc.perform(post(URL_BANK_CARD_MOCK)
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, badHeader)
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestWrapper)))
@@ -270,18 +275,16 @@ public class ApiEmulatorControllerTests {
     @Test
     @DisplayName("POST " + URL_TOKEN + " - Success")
     void generateAuthToken_ShouldReturnToken() throws Exception {
-        // Stubbing the AuthenticationService
         when(authService.generateAuthToken(any(AuthRequest.class)))
                 .thenReturn(AuthResponse.success("jwt-token", "3600", null, "issuer"));
 
-        // ACT & ASSERT
         mockMvc.perform(post(URL_TOKEN)
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(AUTH_REQUEST)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.Data.token").value("jwt-token"))
                 .andExpect(jsonPath("$.Success").value(true))
-                .andExpect(jsonPath("$.Message").value(SUCCESS.name()));
+                .andExpect(jsonPath("$.Message").value(SUCCESS.toString()));
     }
 
     @Test
