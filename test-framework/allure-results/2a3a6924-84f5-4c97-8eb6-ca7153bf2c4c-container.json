@@ -1,0 +1,1 @@
+{"uuid":"2a3a6924-84f5-4c97-8eb6-ca7153bf2c4c","name":"POST /api/v1/elya-bank/auth/token - Should throw RestClientException when credentials are invalid","children":["391948f1-f29a-4567-8b83-6f189111e7f5"],"befores":[],"afters":[],"start":1775584716412,"stop":1775584719866}

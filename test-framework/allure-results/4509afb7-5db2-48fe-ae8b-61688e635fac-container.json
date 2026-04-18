@@ -1,0 +1,1 @@
+{"uuid":"4509afb7-5db2-48fe-ae8b-61688e635fac","name":"getApiBankCardById() - Should return specific card when it exists in emulator","children":["0ecaa045-97f3-45bf-8bc3-382d68808351"],"befores":[],"afters":[],"start":1776202025743,"stop":1776202028655}
