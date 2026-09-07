@@ -1,0 +1,1 @@
+{"uuid":"37743ffa-bcee-4f6e-8353-d831fe3330fb","name":"getApiBankCardById() - Should throw exception when card ID does not exist","children":["45e436ff-4cab-4928-b450-ce74e3e85bda"],"befores":[],"afters":[],"start":1776368053462,"stop":1776368054770}

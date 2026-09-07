@@ -1,0 +1,1 @@
+{"uuid":"242e837d-10e0-42b1-88b7-e8e594dffbb4","name":"POST /api/v1/elya-bank/auth/token - Should return 200 and token when credentials are valid","children":["339fa07a-1323-41c5-bfb7-e2b9e4f79da7"],"befores":[],"afters":[],"start":1776368745916,"stop":1776368747313}

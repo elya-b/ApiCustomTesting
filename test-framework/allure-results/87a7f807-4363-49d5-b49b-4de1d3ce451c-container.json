@@ -1,0 +1,1 @@
+{"uuid":"87a7f807-4363-49d5-b49b-4de1d3ce451c","name":"getBankCards() - Should return list of cards when cards are present in emulator","children":["9152febd-1c01-4a27-841a-a6f0ad3945df"],"befores":[],"afters":[],"start":1776368046462,"stop":1776368047780}

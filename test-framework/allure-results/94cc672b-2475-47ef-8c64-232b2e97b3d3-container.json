@@ -1,0 +1,1 @@
+{"uuid":"94cc672b-2475-47ef-8c64-232b2e97b3d3","name":"getBankCards() - Should return mapped BankCard list when API returns valid JSON","children":["4c425c84-61bc-46b5-960e-064e1db03251"],"befores":[],"afters":[],"start":1776420985564,"stop":1776420985631}
