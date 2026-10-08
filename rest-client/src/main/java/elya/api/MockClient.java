@@ -6,7 +6,7 @@ import elya.apicontracts.IMockControlApi;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.interfaces.IRestClientApi;
-import elya.restclient.constants.logs.RestClientException;
+import elya.restclient.exceptions.RestClientException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

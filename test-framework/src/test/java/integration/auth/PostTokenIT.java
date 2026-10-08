@@ -5,14 +5,13 @@ import elya.allure.PriorityLevel;
 import elya.authentication.Token;
 import elya.constants.Role;
 import elya.dto.auth.AuthRequest;
-import elya.restclient.constants.logs.RestClientException;
+import elya.restclient.exceptions.ApiHttpStatusException;
 import integration.AbstractApiTest;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static elya.constants.ApiEndpoints.*;
-import static elya.restclient.constants.logs.ExceptionMessage.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -20,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @Epic("Authentication API")
 @Feature("POST /token — Generate Auth Token")
-public class PostToken extends AbstractApiTest {
+public class PostTokenIT extends AbstractApiTest {
 
     @Test
     @Story("Successful token generation")
@@ -43,14 +42,19 @@ public class PostToken extends AbstractApiTest {
     @Story("Authentication failure")
     @Severity(SeverityLevel.CRITICAL)
     @Priority(PriorityLevel.HIGH)
-    @DisplayName("POST " + URL_TOKEN + " - Should throw RestClientException when credentials are invalid")
-    void POST_Token_ShouldThrowException_WhenCredentialsAreInvalid() {
+    @DisplayName("POST " + URL_TOKEN + " - Should return 401 when credentials are invalid")
+    void POST_Token_ShouldReturn401_WhenCredentialsAreInvalid() {
         AuthRequest authRequest = prepareLoginRequest("invalid_user", "invalid_pass");
 
-        verify("Request should fail with RestClientException", () -> {
-            var exception = assertThrows(RestClientException.class, () -> clientApi.generateAuthToken(authRequest));
-            assertTrue(exception.getMessage().contains(GENERATE_TOKEN_EXCEPTION), "Error message mismatch");
-        });
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.generateAuthToken(authRequest));
+        attachJson("Error response", exception.getResponseBody());
+
+        verify("Wrong credentials must be rejected by the service with 401", () -> assertAll(
+                () -> assertEquals(401, exception.getStatusCode(), "Status code must be 401"),
+                () -> assertTrue(exception.getResponseBody().contains("Invalid or missing credentials"),
+                        "Body must name the reason, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test
@@ -97,14 +101,18 @@ public class PostToken extends AbstractApiTest {
     @Severity(SeverityLevel.NORMAL)
     @Priority(PriorityLevel.MEDIUM)
     @DisplayName("POST " + URL_TOKEN + " - Should return 400 when login is blank")
-    void POST_Token_ShouldFail_WhenLoginIsBlank() {
+    void POST_Token_ShouldReturn400_WhenLoginIsBlank() {
         AuthRequest authRequest = prepareLoginRequest("", "any_password");
 
-        verify("Blank login must be rejected", () ->
-                assertThrows(RestClientException.class,
-                        () -> clientApi.generateAuthToken(authRequest),
-                        "Blank login must cause RestClientException")
-        );
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.generateAuthToken(authRequest));
+        attachJson("Error response", exception.getResponseBody());
+
+        verify("A blank login must be rejected by bean validation, not by the service", () -> assertAll(
+                () -> assertEquals(400, exception.getStatusCode(), "Blank login must give 400, not 401"),
+                () -> assertTrue(exception.getResponseBody().contains("Invalid credentials or missing fields"),
+                        "Body must carry the @NotBlank message, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test
@@ -112,13 +120,17 @@ public class PostToken extends AbstractApiTest {
     @Severity(SeverityLevel.NORMAL)
     @Priority(PriorityLevel.MEDIUM)
     @DisplayName("POST " + URL_TOKEN + " - Should return 400 when password is blank")
-    void POST_Token_ShouldFail_WhenPasswordIsBlank() {
+    void POST_Token_ShouldReturn400_WhenPasswordIsBlank() {
         AuthRequest authRequest = prepareLoginRequest("any_login", "");
 
-        verify("Blank password must be rejected", () ->
-                assertThrows(RestClientException.class,
-                        () -> clientApi.generateAuthToken(authRequest),
-                        "Blank password must cause RestClientException")
-        );
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.generateAuthToken(authRequest));
+        attachJson("Error response", exception.getResponseBody());
+
+        verify("A blank password must be rejected by bean validation, not by the service", () -> assertAll(
+                () -> assertEquals(400, exception.getStatusCode(), "Blank password must give 400, not 401"),
+                () -> assertTrue(exception.getResponseBody().contains("Invalid credentials or missing fields"),
+                        "Body must carry the @NotBlank message, got: " + exception.getResponseBody())
+        ));
     }
 }

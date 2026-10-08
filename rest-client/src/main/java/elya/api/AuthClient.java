@@ -7,7 +7,7 @@ import elya.apicontracts.IAuthApi;
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
 import elya.interfaces.IRestClientApi;
-import elya.restclient.constants.logs.RestClientException;
+import elya.restclient.exceptions.RestClientException;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;

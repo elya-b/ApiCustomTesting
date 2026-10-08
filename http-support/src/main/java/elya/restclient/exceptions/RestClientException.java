@@ -1,4 +1,4 @@
-package elya.restclient.constants.logs;
+package elya.restclient.exceptions;
 
 /**
  * Base unchecked exception for the REST client module.

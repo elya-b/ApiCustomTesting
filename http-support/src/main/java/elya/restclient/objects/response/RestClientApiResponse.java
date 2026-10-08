@@ -35,6 +35,18 @@ public class RestClientApiResponse {
     private Map<String, String> headers = new HashMap<>();
 
     /**
+     * Extracts the HTTP status code from the status metadata.
+     *
+     * @return the status code, or {@code -1} if the response carries no usable status.
+     */
+    public int getStatusCode() {
+        if (statuses != null && statuses.get(STATUS.toString()) instanceof Number codeObj) {
+            return codeObj.intValue();
+        }
+        return -1;
+    }
+
+    /**
      * Determines if the request was successful based on the HTTP status code.
      * <p>A request is considered successful if the status code is within
      * the 200-299 range.</p>
@@ -42,10 +54,7 @@ public class RestClientApiResponse {
      * @return {@code true} if the status code indicates success; {@code false} otherwise.
      */
     public boolean isSuccessful() {
-        if (statuses != null && statuses.get(STATUS.toString()) instanceof Number codeObj) {
-            int code = codeObj.intValue();
-            return code >= 200 && code < 300;
-        }
-        return false;
+        int code = getStatusCode();
+        return code >= 200 && code < 300;
     }
 }

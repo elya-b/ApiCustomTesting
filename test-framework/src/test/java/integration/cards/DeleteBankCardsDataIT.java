@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Epic("Bank Card API")
 @Feature("DELETE /bank-cards/data — Clear Mock Response")
-public class DeleteBankCardsData extends AbstractApiTest {
+public class DeleteBankCardsDataIT extends AbstractApiTest {
 
     @Test
     @Story("Clear existing cards")

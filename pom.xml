@@ -21,6 +21,7 @@
         <allure-maven.version>2.15.0</allure-maven.version>
         <aspectj.version>1.9.25.1</aspectj.version>
         <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+        <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
         <maven-dependency-plugin.version>3.10.0</maven-dependency-plugin.version>
     </properties>
 
@@ -141,6 +142,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${maven-failsafe-plugin.version}</version>
                 </plugin>
 
                 <plugin>
