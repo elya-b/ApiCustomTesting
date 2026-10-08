@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 @Epic("Bank Card API")
 @Feature("DELETE /bank-cards/data/{id} — Delete Card By ID")
-public class DeleteBankCardsDataById extends AbstractApiTest {
+public class DeleteBankCardsDataByIdIT extends AbstractApiTest {
 
     @Test
     @Story("Successful deletion")

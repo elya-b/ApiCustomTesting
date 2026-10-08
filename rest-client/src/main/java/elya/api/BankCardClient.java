@@ -8,7 +8,8 @@ import elya.apicontracts.IBankCardApi;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardResponse;
 import elya.interfaces.IRestClientApi;
-import elya.restclient.constants.logs.RestClientException;
+import elya.restclient.exceptions.ApiHttpStatusException;
+import elya.restclient.exceptions.RestClientException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -74,7 +75,7 @@ public class BankCardClient implements IBankCardApi {
 
             List<BankCardResponse> cards = objectMapper.convertValue(
                     cardsArray,
-                    new TypeReference<List<BankCardResponse>>() {}
+                    new TypeReference<>() {}
             );
 
             return BankCardListResponse.of(cards);
@@ -90,24 +91,24 @@ public class BankCardClient implements IBankCardApi {
      *
      * @param token  the security token.
      * @param cardId the unique ID of the card.
-     * @return an {@link Optional} containing the card details, or empty if not found/error occurs.
+     * @return an {@link Optional} with the card details, empty if the server returned no content.
+     * @throws ApiHttpStatusException if the server answered with a non-2xx status.
+     * @throws RestClientException    if the response cannot be mapped to the DTO.
      */
     @Override
     public Optional<BankCardResponse> getApiBankCardById(String token, Long cardId) {
-        Map<String, String> headers = createHeaders(token);
         String url = URL_BANK_CARD_DATA + "/" + cardId;
+        JsonNode responseJson = clientApi.get(url, createHeaders(token));
+
+        if (!RestClientApiHelper.hasContent(responseJson)) {
+            return Optional.empty();
+        }
 
         try {
-            JsonNode responseJson = clientApi.get(url, headers);
-
-            if (!RestClientApiHelper.hasContent(responseJson)) {
-                return Optional.empty();
-            }
-
             return Optional.ofNullable(objectMapper.convertValue(responseJson, BankCardResponse.class));
-        } catch (Exception e) {
-            log.warn("Failed to retrieve card by ID [{}]: {}", cardId, e.getMessage());
-            return Optional.empty();
+        } catch (IllegalArgumentException e) {
+            log.error(PARSING_ERROR, e.getMessage());
+            throw new RestClientException(UNEXPECTED_JSON_EXCEPTION, e);
         }
     }
 

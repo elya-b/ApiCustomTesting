@@ -9,13 +9,14 @@
 
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [Module Structure](#module-structure)
 - [Tech Stack](#tech-stack)
 - [API Reference](#api-reference)
 - [How It Works](#how-it-works)
 - [Getting Started](#getting-started)
+- [Running Tests](#running-tests)
 - [Test Reports](#test-reports)
 - [Known Limitations](#known-limitations)
+- [Project Goals](#project-goals)
 
 ---
 
@@ -122,8 +123,10 @@ ApiCustomTesting/
 │       └── restclient/
 │           ├── constants/logs/
 │           │   ├── ErrorLogs.java
-│           │   ├── ExceptionMessage.java
-│           │   └── RestClientException.java
+│           │   └── ExceptionMessage.java
+│           ├── exceptions/
+│           │   ├── RestClientException.java      # Base unchecked client failure
+│           │   └── ApiHttpStatusException.java   # Non-2xx response: carries status + body
 │           └── objects/response/
 │               └── RestClientApiResponse.java  # Wrapper for HTTP response + status info
 │
@@ -174,17 +177,17 @@ ApiCustomTesting/
     │       └── config/
     │           └── EmulatorTestConfig.java  # @Configuration: beans for test context
     └── src/test/java/
-        ├── integration/
+        ├── integration/                     # *IT — run by failsafe during `mvn verify`
         │   ├── AbstractApiTest.java         # @BeforeEach start emulator / @AfterEach stop
         │   ├── auth/
-        │   │   └── PostToken.java           # Auth flow tests
+        │   │   └── PostTokenIT.java         # Auth flow tests
         │   └── cards/
-        │       ├── GetBankCardsData.java    # GET list — happy path + edge cases
-        │       ├── GetBankCardsDataById.java # GET by ID — valid / not found
-        │       ├── PostBankCardsData.java   # POST — validation, duplicates, limits
-        │       ├── DeleteBankCardsData.java # DELETE all — idempotency
-        │       └── DeleteBankCardsDataById.java # DELETE by ID — valid / not found
-        └── unit/
+        │       ├── GetBankCardsDataIT.java     # GET list — happy path + edge cases
+        │       ├── GetBankCardsDataByIdIT.java # GET by ID — valid / not found
+        │       ├── PostBankCardsDataIT.java    # POST — validation, duplicates, limits
+        │       ├── DeleteBankCardsDataIT.java  # DELETE all — idempotency
+        │       └── DeleteBankCardsDataByIdIT.java # DELETE by ID — valid / not found
+        └── unit/                            # *Tests — run by surefire during `mvn test`
             └── engine/sevices/emulator/
                 └── EmulatorLifecycleManagerTests.java
 ```
@@ -195,7 +198,7 @@ ApiCustomTesting/
 
 | Layer | Technology | Details |
 |---|---|---|
-| Language | Java 21 | Records, pattern matching, sealed classes |
+| Language | Java 21 | Records, pattern matching for `instanceof` |
 | Framework | Spring Boot 3.5.7 | Web, Actuator, Validation, Auto-configuration |
 | HTTP Client | Java `HttpClient` (HTTP/2) | Native JDK client, `Duration` timeouts |
 | HTTP Server | Spring MVC (`@RestController`) | Embedded Tomcat via spring-boot-starter-web |
@@ -212,7 +215,7 @@ ApiCustomTesting/
 | Code Generation | Lombok 1.18.30 | `@Builder`, `@Slf4j`, `@RequiredArgsConstructor`, `@UtilityClass` |
 | Configuration | Spring `@ConfigurationProperties` + `@Value` | Type-safe property binding |
 | Persistence | JSON file-based (Jackson) | Survives emulator restarts within a test session |
-| Build | Maven 3.9+ (multi-module) | `maven-surefire-plugin 3.5.5`, `maven-dependency-plugin 3.10.0` |
+| Build | Maven 3.9+ (multi-module) | `surefire 3.5.5` (unit), `failsafe 3.5.5` (integration), `dependency 3.10.0` |
 | AOP | AspectJ Weaver | Required by Allure for `@Step` interception |
 
 ---
@@ -237,7 +240,7 @@ All endpoints require a `Bearer` token in the `Authorization` header (except `/a
 | `ADMIN` | `admin` | `admin` |
 | `QA` | `qa` | `qa` |
 
-**Token lifetime:** 3600 seconds (configurable via `api.credentials.token.expiration`)
+**Token lifetime:** 3600 seconds
 
 ---
 
@@ -249,19 +252,19 @@ Test JVM
 ├─► @BeforeEach  AbstractApiTest.setUp()
 │       │
 │       └─► EmulatorLifecycleManager.start(AuthRequest)
-│               ├── ApiEmulatorRunner.start()          # Starts Spring Boot context on random port
+│               ├── ApiEmulatorRunner.start()          # Starts Spring Boot context
 │               ├── Actuator /health polling           # Waits until emulator is UP
 │               ├── POST /auth/token                   # Authenticates and stores session token
 │               └── Injects baseUrl into RestClientApiEngine
 │
 ├─► Test method executes
-│       ├── emulator.seedCards(cards)                  # POST /bank-cards/data
-│       ├── clientApi.getBankCards(token)              # GET /bank-cards/data
-│       └── assertions on RestClientApiResponse
+│       ├── emulator.addBankCards(token, cards)        # POST /bank-cards/data
+│       ├── clientApi.getApiBankCards(token)           # GET /bank-cards/data
+│       └── assertions on the returned domain objects
 │
 └─► @AfterEach   AbstractApiTest.tearDown()
         └─► EmulatorLifecycleManager.stop()
-                ├── DELETE /bank-cards/data            # Clear mock data
+                ├── Clears SessionRepository + MockRepository
                 └── ApiEmulatorRunner.stop()           # Closes Spring context
 ```
 
@@ -280,19 +283,13 @@ Test JVM
 mvn clean install
 ```
 
-### Run integration tests
-
-```bash
-mvn test -pl test-framework
-```
-
 ### Run the emulator as a standalone server
 
 ```bash
 mvn spring-boot:run -pl api-emulator
 ```
 
-Swagger UI → `http://localhost:8080/swagger-ui.html`  
+Swagger UI → `http://localhost:8080/swagger-ui.html`
 Actuator health → `http://localhost:8080/actuator/health`
 
 ### Run with a specific Spring profile
@@ -303,14 +300,47 @@ mvn spring-boot:run -pl api-emulator -Dspring-boot.run.profiles=dev
 
 ---
 
-## Test Reports
+## Running Tests
+
+Unit and integration tests are separated by Maven phase, using the standard
+surefire / failsafe split.
+
+| Command | What runs | Plugin | Class naming |
+|---|---|---|---|
+| `mvn test` | Unit tests only — fast, no server started | surefire | `*Tests` |
+| `mvn verify` | Unit tests **and** integration tests against the emulator | surefire + failsafe | `*Tests` + `*IT` |
 
 ```bash
-# Run tests and generate Allure results
-mvn test -pl test-framework
+# Fast feedback loop — unit tests only
+mvn test
 
-# Start Allure report server
-allure serve test-framework/allure-results
+# Full suite, including integration tests against the live emulator
+mvn verify
+
+# Single integration test class
+mvn verify -Dit.test=PostTokenIT -pl test-framework -am
+
+# Single unit test class
+mvn test -Dtest=RestClientApiEngineTests -pl rest-client -am
+```
+
+Integration tests start a real Spring Boot emulator per test method, so
+`mvn verify` is significantly slower than `mvn test`. Use `mvn test` while
+developing and `mvn verify` before pushing.
+
+---
+
+## Test Reports
+
+Allure results are written to `target/allure-results` of each module
+(configured in `allure.properties`).
+
+```bash
+# Run the full suite and generate Allure results
+mvn verify
+
+# Start the Allure report server
+allure serve test-framework/target/allure-results
 ```
 
 The report includes step-level breakdowns (`@Step`), request/response details, and test categorization by `@Feature` / `@Story`.
@@ -323,10 +353,12 @@ The report includes step-level breakdowns (`@Step`), request/response details, a
 |---|---|---|
 | 1 | **No persistence across JVM restarts** | All mock data is in-memory + local JSON files; data is lost on full restart |
 | 2 | **`NoOpPasswordEncoder` in auth** | Passwords stored and compared as plain text — intentional for test simplicity, not production-safe |
-| 3 | **Single-node only** | `ConcurrentHashMap`-based storage does not support distributed or parallel test runs |
-| 4 | **File-based session storage** | JSON files used for persistence may cause issues in CI environments with read-only filesystems |
-| 5 | **No token refresh** | Expired tokens require full re-authentication; no refresh flow implemented |
-| 6 | **Auto-configuration exclusions are broad** | JPA, MongoDB, Liquibase, and OAuth2 are excluded globally via `application.properties` |
+| 3 | **Single-node only** | `ConcurrentHashMap`-based storage does not support distributed test runs |
+| 4 | **Fixed emulator port** | `EmulatorLifecycleManager` binds port 8080; parallel runs would also collide on the shared JSON storage paths |
+| 5 | **Token validation is stateful** | Even with the JWT provider active, tokens are validated against `SessionRepository`; the signature is not verified, so there is no true stateless mode |
+| 6 | **No token refresh** | Expired tokens require full re-authentication; no refresh flow implemented |
+| 7 | **Auto-configuration exclusions are broad** | JPA, MongoDB, Liquibase, and OAuth2 are excluded globally via `application.properties` |
+| 8 | **Full Spring context per test method** | `AbstractApiTest` starts and stops the emulator in `@BeforeEach`/`@AfterEach` — maximum isolation, at the cost of run time |
 
 ---
 
@@ -341,3 +373,4 @@ This project was built to practice and demonstrate:
 - **Interface-driven design** separating HTTP contracts from implementation
 - **Allure + AspectJ** integration for rich test reporting with `@Step` interception
 - **Health-check-based readiness polling** before test execution begins
+- **Unit / integration test separation** by Maven phase (surefire + failsafe)

@@ -11,13 +11,12 @@ import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardRequest;
 import elya.dto.bankcard.BankCardResponse;
-import elya.restclient.constants.logs.RestClientException;
+import elya.restclient.exceptions.RestClientException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Optional;
 
 import static elya.restclient.constants.logs.ExceptionMessage.*;
 

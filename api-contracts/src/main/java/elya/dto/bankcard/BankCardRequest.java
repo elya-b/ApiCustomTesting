@@ -31,7 +31,7 @@ public class BankCardRequest {
      * Validated to be within the range of standard 16-digit integers.
      */
     @Schema(description = "Card number", example = "4444333322221111")
-    @NotNull
+    @NotNull(message = "Card number is mandatory")
     @Range(
             min = 1_000_000_000_000_000L,
             max = 9_999_999_999_999_999L,

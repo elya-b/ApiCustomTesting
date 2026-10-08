@@ -5,6 +5,7 @@ import elya.allure.PriorityLevel;
 import elya.card.BankCard;
 import elya.card.constants.CardType;
 import elya.card.constants.Currency;
+import elya.restclient.exceptions.ApiHttpStatusException;
 import integration.AbstractApiTest;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.DisplayName;
@@ -21,91 +22,111 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @Epic("Bank Card API")
 @Feature("POST /bank-cards/data — Set Mock Response")
-public class PostBankCardsData extends AbstractApiTest {
+public class PostBankCardsDataIT extends AbstractApiTest {
 
     @Test
     @Story("Card number validation")
     @Severity(SeverityLevel.NORMAL)
     @Priority(PriorityLevel.MEDIUM)
-    @DisplayName("setMockResponse() - Should return empty list when card number has 15 digits")
-    void setMockResponse_ShouldReturnEmptyList_WhenCardNumberHas15Digits() {
+    @DisplayName("setMockResponse() - Should return 400 when card number has 15 digits")
+    void setMockResponse_ShouldReturn400_WhenCardNumberHas15Digits() {
         String token = emulator.getAuthToken();
         var cardRequest = BankCard.builder(444455556666777L, CardType.DEBIT, Currency.USD).build();
         attachJson("Request", cardRequest);
 
-        List<BankCard> result = clientApi.setMockResponse(token, List.of(cardRequest));
-        attachJson("Response", result);
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.setMockResponse(token, List.of(cardRequest)));
+        attachJson("Error response", exception.getResponseBody());
 
-        assertNotNull(result, "Result list should not be null");
-        assertTrue(result.isEmpty(), "Card with 15 digits should not be created or returned");
+        verify("A 15-digit card number must be rejected", () -> assertAll(
+                () -> assertEquals(400, exception.getStatusCode(), "Status code must be 400"),
+                () -> assertTrue(exception.getResponseBody().contains("Card number must be 16 digits"),
+                        "Body must carry the validation message, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test
     @Story("Card number validation")
     @Severity(SeverityLevel.NORMAL)
     @Priority(PriorityLevel.MEDIUM)
-    @DisplayName("setMockResponse() - Should return empty list when card number has 17 digits")
-    void setMockResponse_ShouldReturnEmptyList_WhenCardNumberHas17Digits() {
+    @DisplayName("setMockResponse() - Should return 400 when card number has 17 digits")
+    void setMockResponse_ShouldReturn400_WhenCardNumberHas17Digits() {
         String token = emulator.getAuthToken();
         var cardRequest = BankCard.builder(44445555666677770L, CardType.DEBIT, Currency.USD).build();
         attachJson("Request", cardRequest);
 
-        List<BankCard> result = clientApi.setMockResponse(token, List.of(cardRequest));
-        attachJson("Response", result);
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.setMockResponse(token, List.of(cardRequest)));
+        attachJson("Error response", exception.getResponseBody());
 
-        assertNotNull(result, "Result list should not be null");
-        assertTrue(result.isEmpty(), "Card with 17 digits should not be created or returned");
+        verify("A 17-digit card number must be rejected", () -> assertAll(
+                () -> assertEquals(400, exception.getStatusCode(), "Status code must be 400"),
+                () -> assertTrue(exception.getResponseBody().contains("Card number must be 16 digits"),
+                        "Body must carry the validation message, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test
     @Story("Required field validation")
     @Severity(SeverityLevel.NORMAL)
     @Priority(PriorityLevel.MEDIUM)
-    @DisplayName("setMockResponse() - Should return empty list when card number is missing")
-    void setMockResponse_ShouldReturnEmptyList_WhenCardNumberIsMissing() {
+    @DisplayName("setMockResponse() - Should return 400 when card number is missing")
+    void setMockResponse_ShouldReturn400_WhenCardNumberIsMissing() {
         String token = emulator.getAuthToken();
         var cardRequest = BankCard.builder(null, CardType.DEBIT, Currency.USD).build();
         attachJson("Request", cardRequest);
 
-        List<BankCard> result = clientApi.setMockResponse(token, List.of(cardRequest));
-        attachJson("Response", result);
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.setMockResponse(token, List.of(cardRequest)));
+        attachJson("Error response", exception.getResponseBody());
 
-        assertNotNull(result, "Result list should not be null");
-        assertTrue(result.isEmpty(), "Card should not be created without card number");
+        verify("A missing card number must be rejected", () -> assertAll(
+                () -> assertEquals(400, exception.getStatusCode(), "Status code must be 400"),
+                () -> assertTrue(exception.getResponseBody().contains("Card number is mandatory"),
+                        "Body must carry the @NotNull message, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test
     @Story("Required field validation")
     @Severity(SeverityLevel.NORMAL)
     @Priority(PriorityLevel.MEDIUM)
-    @DisplayName("setMockResponse() - Should return empty list when currency is missing")
-    void setMockResponse_ShouldReturnEmptyList_WhenCurrencyIsMissing() {
+    @DisplayName("setMockResponse() - Should return 400 when currency is missing")
+    void setMockResponse_ShouldReturn400_WhenCurrencyIsMissing() {
         String token = emulator.getAuthToken();
         var cardRequest = BankCard.builder(4444555566667777L, CardType.DEBIT, null).build();
         attachJson("Request", cardRequest);
 
-        List<BankCard> result = clientApi.setMockResponse(token, List.of(cardRequest));
-        attachJson("Response", result);
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.setMockResponse(token, List.of(cardRequest)));
+        attachJson("Error response", exception.getResponseBody());
 
-        assertNotNull(result, "Result list should not be null");
-        assertTrue(result.isEmpty(), "Card should not be created without currency");
+        verify("A missing currency must be rejected", () -> assertAll(
+                () -> assertEquals(400, exception.getStatusCode(), "Status code must be 400"),
+                () -> assertTrue(exception.getResponseBody().contains("Currency is mandatory"),
+                        "Body must carry the @NotNull message, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test
     @Story("Required field validation")
     @Severity(SeverityLevel.NORMAL)
     @Priority(PriorityLevel.MEDIUM)
-    @DisplayName("setMockResponse() - Should return empty list when card type is missing")
-    void setMockResponse_ShouldReturnEmptyList_WhenCardTypeIsMissing() {
+    @DisplayName("setMockResponse() - Should return 400 when card type is missing")
+    void setMockResponse_ShouldReturn400_WhenCardTypeIsMissing() {
         String token = emulator.getAuthToken();
         var cardRequest = BankCard.builder(4444555566667777L, null, Currency.EUR).build();
         attachJson("Request", cardRequest);
 
-        List<BankCard> result = clientApi.setMockResponse(token, List.of(cardRequest));
-        attachJson("Response", result);
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.setMockResponse(token, List.of(cardRequest)));
+        attachJson("Error response", exception.getResponseBody());
 
-        assertNotNull(result, "Result list should not be null");
-        assertTrue(result.isEmpty(), "Card should not be created without card type");
+        verify("A missing card type must be rejected", () -> assertAll(
+                () -> assertEquals(400, exception.getStatusCode(), "Status code must be 400"),
+                () -> assertTrue(exception.getResponseBody().contains("Card type is mandatory"),
+                        "Body must carry the @NotNull message, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test

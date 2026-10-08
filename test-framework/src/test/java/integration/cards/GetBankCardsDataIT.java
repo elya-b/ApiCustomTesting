@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @Epic("Bank Card API")
 @Feature("GET /bank-cards/data — Retrieve Cards")
-public class GetBankCardsData extends AbstractApiTest {
+public class GetBankCardsDataIT extends AbstractApiTest {
 
     @Test
     @Story("Cards are present")

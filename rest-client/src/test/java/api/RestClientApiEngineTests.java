@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import elya.ApiEmulatorHttpStatusInfoGenerator;
 import elya.api.RestClientApiEngine;
+import elya.restclient.exceptions.ApiHttpStatusException;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -26,13 +27,13 @@ import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
  * Unit tests for {@link elya.api.RestClientApiEngine} using an embedded JDK {@link com.sun.net.httpserver.HttpServer}.
  * <ul>
  *   <li>{@code get()} — returns a JsonNode for a successful response (200)</li>
- *   <li>{@code get()} — returns an empty ObjectNode for a server error (500)</li>
+ *   <li>{@code get()} — throws ApiHttpStatusException with status 500 for a server error</li>
  *   <li>{@code get()} — returns an empty ObjectNode when the response body is empty</li>
  *   <li>{@code get()} — forwards custom headers to the server</li>
- *   <li>{@code get()} — returns an empty ObjectNode when the host is unreachable</li>
+ *   <li>{@code get()} — throws ApiHttpStatusException with status 503 when the host is unreachable</li>
  *   <li>{@code post()} — sends the body and returns the echoed JSON response</li>
  *   <li>{@code post()} — does not throw for a null body</li>
- *   <li>{@code post()} — returns an empty ObjectNode when the server returns 500</li>
+ *   <li>{@code post()} — throws ApiHttpStatusException with status 500 when the server returns 500</li>
  *   <li>{@code delete(url)} — returns true for a 200 response</li>
  *   <li>{@code delete(url)} — returns false for a 404 response</li>
  *   <li>{@code delete(url, headers)} — does not throw when using the headers overload</li>
@@ -143,13 +144,16 @@ public class RestClientApiEngineTests {
     }
 
     @Test
-    @DisplayName("get() - Should return empty ObjectNode for 500 error response")
-    void get_ShouldReturnEmptyNode_ForErrorResponse() {
-        JsonNode result = engine.get("/server-error", Collections.emptyMap());
+    @DisplayName("get() - Should throw ApiHttpStatusException with status 500 for a server error")
+    void get_ShouldThrowWithStatus500_ForErrorResponse() {
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> engine.get("/server-error", Collections.emptyMap()));
 
-        assertNotNull(result);
-        assertTrue(result.isObject());
-        assertTrue(result.isEmpty(), "Must return empty node for non-2xx status");
+        assertAll(
+                () -> assertEquals(500, exception.getStatusCode(), "Status code must be 500"),
+                () -> assertTrue(exception.getResponseBody().contains("internal"),
+                        "Body must be preserved, got: " + exception.getResponseBody())
+        );
     }
 
     @Test
@@ -174,14 +178,15 @@ public class RestClientApiEngineTests {
     }
 
     @Test
-    @DisplayName("get() - Should return empty ObjectNode when host is unreachable")
-    void get_ShouldReturnEmptyNode_WhenHostIsUnreachable() {
+    @DisplayName("get() - Should throw ApiHttpStatusException with status 503 when host is unreachable")
+    void get_ShouldThrowWithStatus503_WhenHostIsUnreachable() {
         RestClientApiEngine badEngine = new RestClientApiEngine("http://localhost:1", statusGenerator);
 
-        JsonNode result = badEngine.get("/unreachable", Collections.emptyMap());
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> badEngine.get("/unreachable", Collections.emptyMap()));
 
-        assertNotNull(result, "Must return a non-null node even when connection fails");
-        assertTrue(result.isObject());
+        assertEquals(503, exception.getStatusCode(),
+                "A transport failure is reported as 503 by the engine");
     }
 
     // --- POST TESTS ---
@@ -205,14 +210,14 @@ public class RestClientApiEngineTests {
     }
 
     @Test
-    @DisplayName("post() - Should return empty ObjectNode when server returns 500")
-    void post_ShouldReturnEmptyNode_OnServerError() throws Exception {
+    @DisplayName("post() - Should throw ApiHttpStatusException with status 500 on server error")
+    void post_ShouldThrowWithStatus500_OnServerError() throws Exception {
         JsonNode body = objectMapper.readTree("{\"test\":true}");
 
-        JsonNode result = engine.post("/server-error", body, Collections.emptyMap());
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> engine.post("/server-error", body, Collections.emptyMap()));
 
-        assertNotNull(result);
-        assertTrue(result.isEmpty(), "Must return empty node for non-2xx status");
+        assertEquals(500, exception.getStatusCode(), "Status code must be 500");
     }
 
     // --- DELETE TESTS ---

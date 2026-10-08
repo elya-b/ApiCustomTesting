@@ -5,6 +5,7 @@ import elya.allure.PriorityLevel;
 import elya.card.BankCard;
 import elya.card.constants.CardType;
 import elya.card.constants.Currency;
+import elya.restclient.exceptions.ApiHttpStatusException;
 import integration.AbstractApiTest;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.DisplayName;
@@ -14,21 +15,20 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for retrieving a card by ID (GET /bank-cards/data/{id}).
  * <ul>
  *   <li>Card found — returns the correct card with all fields matching</li>
- *   <li>Card not found — throws RuntimeException with a descriptive message</li>
+ *   <li>Card not found — the server answers 404</li>
  *   <li>Multiple cards present — returns exactly the card with the requested ID</li>
  *   <li>Card with optional fields — all fields are returned correctly</li>
  * </ul>
  */
 @Epic("Bank Card API")
 @Feature("GET /bank-cards/data/{id} — Retrieve Card By ID")
-public class GetBankCardsDataById extends AbstractApiTest {
+public class GetBankCardsDataByIdIT extends AbstractApiTest {
 
     @Test
     @Story("Card found")
@@ -61,16 +61,17 @@ public class GetBankCardsDataById extends AbstractApiTest {
     @Story("Card not found")
     @Severity(SeverityLevel.CRITICAL)
     @Priority(PriorityLevel.HIGH)
-    @DisplayName("getApiBankCardById() - Should throw exception when card ID does not exist")
-    void getApiBankCardById_ShouldThrowException_WhenCardIdDoesNotExist() {
+    @DisplayName("getApiBankCardById() - Should return 404 when card ID does not exist")
+    void getApiBankCardById_ShouldReturn404_WhenCardIdDoesNotExist() {
         String token = emulator.getAuthToken();
         Long nonExistentId = 999999L;
 
-        verify("Verify that requesting a non-existent ID results in a RuntimeException", () ->
-                assertThatThrownBy(() -> clientApi.getApiBankCardById(token, nonExistentId))
-                        .isInstanceOf(RuntimeException.class)
-                        .hasMessageContaining("Card not found with ID: " + nonExistentId)
-        );
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.getApiBankCardById(token, nonExistentId));
+
+        verify("A non-existent card ID must be answered with 404", () ->
+                assertEquals(404, exception.getStatusCode(),
+                        "Status code must be 404, got: " + exception.getStatusCode()));
     }
 
     @Test

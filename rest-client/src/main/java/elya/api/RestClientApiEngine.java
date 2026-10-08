@@ -5,13 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.ApiEmulatorHttpStatusInfoGenerator;
 import elya.interfaces.IRestClientApi;
 import elya.interfaces.IRestClientApiEngine;
-import elya.restclient.constants.logs.RestClientException;
+import elya.restclient.exceptions.ApiHttpStatusException;
+import elya.restclient.exceptions.RestClientException;
 import elya.restclient.objects.response.RestClientApiResponse;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,7 +25,8 @@ import java.util.stream.Collectors;
 
 import static elya.constants.enums.HttpHeaderValues.APPLICATION_JSON;
 import static elya.restclient.constants.logs.ErrorLogs.*;
-import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static elya.restclient.constants.logs.ExceptionMessage.*;
+import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Core engine for executing HTTP requests using Java's native {@link HttpClient}.
@@ -116,15 +117,26 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
     }
 
     /**
-     * Extracts the JSON tree from the response, ensuring a non-null node is always returned.
+     * Extracts the JSON tree from a successful response.
+     *
+     * @param response the raw client response.
+     * @return the parsed body, or an empty object node when the body was empty.
+     * @throws ApiHttpStatusException if the server answered with a non-2xx status.
+     * @throws RestClientException    if the response carries no usable HTTP status.
      */
     private JsonNode handleJsonResponse(RestClientApiResponse response) {
-        JsonNode root = response.getResponseAsJson();
-        log.info("isSuccessful={}, statuses={}, body={}", response.isSuccessful(), response.getStatuses(), response.getResponseAsString());
-        if (response.isSuccessful() && root != null) {
-            return root;
+        if (response.isSuccessful()) {
+            JsonNode root = response.getResponseAsJson();
+            return root != null ? root : objectMapper.createObjectNode();
         }
-        return objectMapper.createObjectNode();
+
+        int statusCode = response.getStatusCode();
+        if (statusCode < 0) {
+            throw new RestClientException(
+                    NO_HTTP_STATUS_EXCEPTION + " Body: " + response.getResponseAsString());
+        }
+
+        throw new ApiHttpStatusException(statusCode, response.getResponseAsString());
     }
 
     /**

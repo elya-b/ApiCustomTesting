@@ -7,7 +7,7 @@ import elya.api.AuthClient;
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
 import elya.interfaces.IRestClientApi;
-import elya.restclient.constants.logs.RestClientException;
+import elya.restclient.exceptions.RestClientException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
