@@ -192,30 +192,6 @@ public class EmulatorLifecycleManager {
     }
 
     /**
-     * Retrieves the current list of cards from the emulator.
-     *
-     * @param token authentication token.
-     * @return a list of {@link BankCard} objects.
-     */
-    public List<BankCard> getBankCards(String token) {
-        try {
-            Map<String, String> headers = Map.of(AUTHORIZATION, BEARER + token);
-            JsonNode responseNode = restClient.get(url + URL_BANK_CARD_DATA, headers);
-
-            JsonNode cardsNode = responseNode.path(RESPONSE.toString()).path(CARDS.toString());
-            if (cardsNode.isMissingNode()) return List.of();
-
-            List<BankCardResponse> dtos = objectMapper.convertValue(cardsNode, new TypeReference<>() {});
-            return dtos.stream()
-                    .map(BankCardResponse::getBankCard)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Failed to retrieve bank cards from {}", URL_BANK_CARD_DATA, e);
-            return List.of();
-        }
-    }
-
-    /**
      * Actuator-based polling logic.
      * <p>Wait for the service to return HTTP 200 on the /health endpoint.
      * Uses exponential backoff (fixed 500ms) until timeout.</p>

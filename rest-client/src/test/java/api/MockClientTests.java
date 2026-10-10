@@ -8,6 +8,8 @@ import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardRequest;
 import elya.dto.bankcard.BankCardResponse;
 import elya.interfaces.IRestClientApi;
+import elya.restclient.exceptions.ApiHttpStatusException;
+import elya.restclient.exceptions.RestClientException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,19 +23,18 @@ import static elya.constants.ApiEndpoints.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+
 /**
  * Unit tests (Mockito) for {@link elya.api.MockClient}.
  * <ul>
  *   <li>{@code setMockResponse()} — returns a response object when the server returns content</li>
  *   <li>{@code setMockResponse()} — returns null when server response is null</li>
  *   <li>{@code deleteApiBankCardById()} — returns an Optional with the deleted ID on success</li>
- *   <li>{@code deleteApiBankCardById()} — returns an empty Optional when deletion fails</li>
- *   <li>{@code clearMockResponse()} — returns true on successful deletion</li>
- *   <li>{@code clearMockResponse()} — returns false when the server fails to delete</li>
- *   <li>{@code clearMockResponse()} — returns false when clientApi throws an exception</li>
- *   <li>{@code setMockResponse()} — throws an exception when response cannot be deserialized</li>
+ *   <li>{@code deleteApiBankCardById()} — propagates the HTTP status when the card is missing</li>
+ *   <li>{@code clearMockResponse()} — returns true when the server accepts the request</li>
+ *   <li>{@code clearMockResponse()} — propagates the HTTP status when the server rejects the request</li>
+ *   <li>{@code setMockResponse()} — throws RestClientException when response cannot be deserialized</li>
  *   <li>{@code setMockResponse()} — sends a "Bearer "-prefixed token in the Authorization header</li>
  * </ul>
  */
@@ -90,8 +91,6 @@ public class MockClientTests {
     @Test
     @DisplayName("deleteApiBankCardById() - Should return Optional with ID when delete is successful")
     void deleteApiBankCardById_ShouldReturnId_WhenSuccessful() {
-        when(clientApi.delete(anyString(), anyMap())).thenReturn(true);
-
         var result = mockClient.deleteApiBankCardById(TOKEN, CARD_ID);
 
         assertAll("Verify delete by ID",
@@ -102,21 +101,20 @@ public class MockClientTests {
     }
 
     @Test
-    @DisplayName("deleteApiBankCardById() - Should return empty Optional when delete fails")
-    void deleteApiBankCardById_ShouldReturnEmpty_WhenDeleteFails() {
-        when(clientApi.delete(anyString(), anyMap())).thenReturn(false);
+    @DisplayName("deleteApiBankCardById() - Should propagate the HTTP status when the card is missing")
+    void deleteApiBankCardById_ShouldPropagateStatus_WhenCardIsMissing() {
+        doThrow(new ApiHttpStatusException(404, "{\"error\":\"not found\"}"))
+                .when(clientApi).delete(anyString(), anyMap());
 
-        var result = mockClient.deleteApiBankCardById(TOKEN, CARD_ID);
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> mockClient.deleteApiBankCardById(TOKEN, CARD_ID));
 
-        assertTrue(result.isEmpty());
-        verify(clientApi).delete(eq(DELETE_BY_ID_URL), anyMap());
+        assertEquals(404, exception.getStatusCode(), "The 404 must reach the caller unchanged");
     }
 
     @Test
-    @DisplayName("clearMockResponse() - Should return true when delete is successful")
+    @DisplayName("clearMockResponse() - Should return true when the server accepts the request")
     void clearMockResponse_ShouldReturnTrue() {
-        when(clientApi.delete(anyString(), anyMap())).thenReturn(true);
-
         var result = mockClient.isResponseClear(TOKEN);
 
         assertTrue(result);
@@ -124,27 +122,18 @@ public class MockClientTests {
     }
 
     @Test
-    @DisplayName("clearMockResponse() - Should return false when server fails to delete")
-    void clearMockResponse_ShouldReturnFalse_WhenDeletionFails() {
-        when(clientApi.delete(anyString(), anyMap())).thenReturn(false);
+    @DisplayName("clearMockResponse() - Should propagate the HTTP status when the server rejects the request")
+    void clearMockResponse_ShouldPropagateStatus_WhenServerRejects() {
+        doThrow(new ApiHttpStatusException(401, "{\"error\":\"unauthorized\"}"))
+                .when(clientApi).delete(anyString(), anyMap());
 
-        var result = mockClient.isResponseClear(TOKEN);
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> mockClient.isResponseClear(TOKEN));
 
-        assertFalse(result);
-        verify(clientApi).delete(eq(URL_BANK_CARD_DATA), anyMap());
+        assertEquals(401, exception.getStatusCode(), "The 401 must not be swallowed into false");
     }
 
     // --- ADDITIONAL CASES ---
-
-    @Test
-    @DisplayName("clearMockResponse() - Should return false when clientApi.delete() throws exception")
-    void clearMockResponse_ShouldReturnFalse_WhenClientApiThrows() {
-        when(clientApi.delete(anyString(), anyMap())).thenThrow(new RuntimeException("network error"));
-
-        var result = mockClient.isResponseClear(TOKEN);
-
-        assertFalse(result, "Exception in clientApi must be caught and return false");
-    }
 
     @Test
     @DisplayName("setMockResponse() - Should throw RestClientException when response cannot be deserialized")
@@ -153,7 +142,7 @@ public class MockClientTests {
         var malformed = objectMapper.getNodeFactory().textNode("not-a-valid-response");
         when(clientApi.post(anyString(), any(), anyMap())).thenReturn(malformed);
 
-        assertThrows(Exception.class, () ->
+        assertThrows(RestClientException.class, () ->
                         mockClient.setMockResponse(TOKEN, BANK_CARD_LIST_REQUEST),
                 "Malformed JSON must cause a RestClientException"
         );
