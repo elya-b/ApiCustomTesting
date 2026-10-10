@@ -5,6 +5,7 @@ import elya.allure.PriorityLevel;
 import elya.card.BankCard;
 import elya.card.constants.CardType;
 import elya.card.constants.Currency;
+import elya.restclient.exceptions.ApiHttpStatusException;
 import integration.AbstractApiTest;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.DisplayName;
@@ -15,12 +16,13 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Integration tests for deleting a card by ID (DELETE /bank-cards/data/{id}).
  * <ul>
  *   <li>Card found — deleted successfully; remaining cards are untouched</li>
- *   <li>Card not found — throws RuntimeException with a descriptive message</li>
+ *   <li>Card not found — fails with HTTP 404 carrying the server's error body</li>
  *   <li>Only card in list — list is empty after deletion</li>
  *   <li>Deleted card — not accessible via {@code getApiBankCardById()}</li>
  *   <li>Returned ID — matches the ID of the deleted card</li>
@@ -69,16 +71,18 @@ public class DeleteBankCardsDataByIdIT extends AbstractApiTest {
     @Story("Card not found")
     @Severity(SeverityLevel.CRITICAL)
     @Priority(PriorityLevel.HIGH)
-    @DisplayName("deleteApiBankCardById() - Should throw exception when card ID does not exist")
-    void deleteApiBankCardById_ShouldThrowException_WhenCardIdDoesNotExist() {
+    @DisplayName("deleteApiBankCardById() - Should fail with 404 when card ID does not exist")
+    void deleteApiBankCardById_ShouldReturn404_WhenCardIdDoesNotExist() {
         String token = emulator.getAuthToken();
         Long nonExistentId = 999999L;
 
-        verify("Verify that deleting a non-existent ID results in a RuntimeException", () ->
-                assertThatThrownBy(() -> clientApi.deleteApiBankCardById(token, nonExistentId))
-                        .isInstanceOf(RuntimeException.class)
-                        .hasMessageContaining("Can not delete card with ID: " + nonExistentId)
-        );
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> clientApi.deleteApiBankCardById(token, nonExistentId));
+
+        attachJson("Error response", exception.getResponseBody());
+
+        verify("Deleting a non-existent ID must fail with 404", () ->
+                assertEquals(404, exception.getStatusCode(), "Status code must be 404"));
     }
 
     @Test

@@ -34,10 +34,10 @@ import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
  *   <li>{@code post()} — sends the body and returns the echoed JSON response</li>
  *   <li>{@code post()} — does not throw for a null body</li>
  *   <li>{@code post()} — throws ApiHttpStatusException with status 500 when the server returns 500</li>
- *   <li>{@code delete(url)} — returns true for a 200 response</li>
- *   <li>{@code delete(url)} — returns false for a 404 response</li>
+ *   <li>{@code delete(url)} — does not throw for a 200 response</li>
+ *   <li>{@code delete(url)} — throws ApiHttpStatusException with status 404 for a missing resource</li>
  *   <li>{@code delete(url, headers)} — does not throw when using the headers overload</li>
- *   <li>{@code delete(url)} — returns false when the host is unreachable</li>
+ *   <li>{@code delete(url)} — throws ApiHttpStatusException with status 503 when the host is unreachable</li>
  *   <li>{@code sendRequest()} — populates the statuses map with the HTTP status code</li>
  *   <li>{@code sendRequest()} — populates the response headers</li>
  *   <li>{@code sendRequest()} — populates responseAsString with the raw body</li>
@@ -223,15 +223,17 @@ public class RestClientApiEngineTests {
     // --- DELETE TESTS ---
 
     @Test
-    @DisplayName("delete(url) - Should return true for 200 response")
-    void delete_ShouldReturnTrue_ForSuccessfulResponse() {
-        assertTrue(engine.delete("/delete-ok"));
+    @DisplayName("delete(url) - Should not throw for 200 response")
+    void delete_ShouldNotThrow_ForSuccessfulResponse() {
+        assertDoesNotThrow(() -> engine.delete("/delete-ok"));
     }
 
     @Test
-    @DisplayName("delete(url) - Should return false for 404 response")
-    void delete_ShouldReturnFalse_ForNotFoundResponse() {
-        assertFalse(engine.delete("/delete-404"));
+    @DisplayName("delete(url) - Should throw ApiHttpStatusException with 404 for missing resource")
+    void delete_ShouldThrow404_ForNotFoundResponse() {
+        var exception = assertThrows(ApiHttpStatusException.class, () -> engine.delete("/delete-404"));
+
+        assertEquals(404, exception.getStatusCode(), "Status code must be 404");
     }
 
     @Test
@@ -243,12 +245,14 @@ public class RestClientApiEngineTests {
     }
 
     @Test
-    @DisplayName("delete(url) - Should return false when host is unreachable")
-    void delete_ShouldReturnFalse_WhenHostIsUnreachable() {
+    @DisplayName("delete(url) - Should surface a connection failure as 503")
+    void delete_ShouldThrow503_WhenHostIsUnreachable() {
         RestClientApiEngine badEngine = new RestClientApiEngine("http://localhost:1", statusGenerator);
 
-        assertFalse(badEngine.delete("/unreachable"),
-                "delete() must return false when connection fails");
+        var exception = assertThrows(ApiHttpStatusException.class, () -> badEngine.delete("/unreachable"));
+
+        assertEquals(503, exception.getStatusCode(),
+                "A connection failure must surface as 503, not as a silent false");
     }
 
     // --- sendRequest() TESTS ---

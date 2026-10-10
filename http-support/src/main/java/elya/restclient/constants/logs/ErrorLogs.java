@@ -10,10 +10,6 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class ErrorLogs {
 
-    /** Logged when the client fails to request a mock data cleanup from the emulator. */
-    public static final String FAILED_TO_CLEAR_MOCK_RESPONSE =
-            "Technical Error: Failed to request mock data clearing.";
-
     /** Logged when the mock configuration cannot be transmitted to the emulator. */
     public static final String FAILED_TO_SET_MOCK_RESPONSE =
             "Technical Error: Could not send mock configuration to the emulator.";

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
 import elya.dto.auth.AuthResponseData;
-import elya.dto.bankcard.BankCardResponse;
 import elya.engine.services.emulator.EmulatorLifecycleManager;
 import elya.interfaces.IRestClientApi;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,13 +22,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static elya.engine.services.emulator.constants.exceptions.Exceptions.FAILED_TO_GENERATE_AUTH_TOKEN;
-import static elya.enums.responsemodel.ApiBankCards.CARDS;
-import static elya.enums.responsemodel.ApiBankCards.RESPONSE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -37,8 +32,6 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests (Mockito) for {@link elya.engine.services.emulator.EmulatorLifecycleManager}.
  * <ul>
- *   <li>{@code getBankCards()} — returns a mapped BankCard list for a valid JSON response</li>
- *   <li>{@code getBankCards()} — returns an empty list when the API throws an exception</li>
  *   <li>{@code performLogin()} — returns a token for a valid response</li>
  *   <li>{@code performLogin()} — throws IllegalStateException for invalid responses (parameterized: success=false or data=null)</li>
  *   <li>{@code waitUntilReady()} — succeeds when the emulator becomes ready on the second attempt</li>
@@ -57,7 +50,6 @@ public class EmulatorLifecycleManagerTests {
     private EmulatorLifecycleManager manager;
 
     private final String baseUrl = "http://localhost:8080";
-    private static final Long CARD_ID = 1L;
     private static final String TOKEN = "token";
     private static final AuthRequest LOGIN_REQUEST = new AuthRequest("admin_user", "admin_password");
 
@@ -65,37 +57,6 @@ public class EmulatorLifecycleManagerTests {
     void setUp() {
         manager = new EmulatorLifecycleManager(restClient, objectMapper, restTemplate);
         ReflectionTestUtils.setField(manager, "url", baseUrl);
-    }
-
-    @Test
-    @DisplayName("getBankCards() - Should return mapped BankCard list when API returns valid JSON")
-    void getBankCards_ShouldReturnMappedCards_WhenResponseIsValid() {
-        var dtoList = List.of(BankCardResponse.builder().cardId(CARD_ID).build());
-        var wrappedResponse = Map.of(
-                RESPONSE.toString(), Map.of(
-                        CARDS.toString(), dtoList
-                )
-        );
-        when(restClient.get(anyString(), anyMap())).thenReturn(toJson(wrappedResponse));
-
-        var cards = manager.getBankCards(TOKEN);
-
-        assertAll("Verify bank card mapping properties",
-                () -> assertFalse(cards.isEmpty(), "Card list should not be empty"),
-                () -> assertEquals(1, cards.size(), "Card list size mismatch"),
-                () -> assertEquals(CARD_ID, cards.getFirst().getCardId(), "Card ID mapping mismatch")
-        );
-    }
-
-    @Test
-    @DisplayName("getBankCards() - Should return empty list when API throws exception")
-    void getBankCards_ShouldReturnEmptyList_WhenApiThrowsException() {
-        when(restClient.get(anyString(), anyMap())).thenThrow(new RuntimeException("Runtime"));
-
-        var cards = manager.getBankCards(TOKEN);
-
-        assertTrue(cards.isEmpty());
-        verify(restClient).get(anyString(), anyMap());
     }
 
     @Test

@@ -106,14 +106,13 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
     }
 
     @Override
-    public boolean delete(String urlPath) {
-        return delete(urlPath, Collections.emptyMap());
+    public void delete(String urlPath) {
+        delete(urlPath, Collections.emptyMap());
     }
 
     @Override
-    public boolean delete(String urlPath, Map<String, String> headers) {
-        RestClientApiResponse response = sendRequest(HttpMethod.DELETE, urlPath, null, headers);
-        return response.isSuccessful();
+    public void delete(String urlPath, Map<String, String> headers) {
+        ensureSuccessful(sendRequest(HttpMethod.DELETE, urlPath, null, headers));
     }
 
     /**
@@ -125,9 +124,25 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
      * @throws RestClientException    if the response carries no usable HTTP status.
      */
     private JsonNode handleJsonResponse(RestClientApiResponse response) {
+        ensureSuccessful(response);
+
+        JsonNode root = response.getResponseAsJson();
+        return root != null ? root : objectMapper.createObjectNode();
+    }
+
+    /**
+     * Fails fast when the server did not answer with a 2xx status.
+     * <p>Every verb routes through this method, so a 404 on DELETE reaches the
+     * caller exactly the way a 404 on GET does. Keeping the classification in one
+     * place is what stops the two paths from drifting apart again.</p>
+     *
+     * @param response the raw client response.
+     * @throws ApiHttpStatusException if the server answered with a non-2xx status.
+     * @throws RestClientException    if the response carries no usable HTTP status.
+     */
+    private void ensureSuccessful(RestClientApiResponse response) {
         if (response.isSuccessful()) {
-            JsonNode root = response.getResponseAsJson();
-            return root != null ? root : objectMapper.createObjectNode();
+            return;
         }
 
         int statusCode = response.getStatusCode();

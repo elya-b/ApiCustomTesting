@@ -1,11 +1,13 @@
 package elya.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.apicontracts.IMockControlApi;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.interfaces.IRestClientApi;
+import elya.restclient.exceptions.ApiHttpStatusException;
 import elya.restclient.exceptions.RestClientException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -57,7 +59,7 @@ public class MockClient implements IMockControlApi {
 
         try {
             return objectMapper.treeToValue(response, BankCardListResponse.class);
-        } catch (Exception e) {
+        } catch (JsonProcessingException | IllegalArgumentException e) {
             log.error(FAILED_TO_SET_MOCK_RESPONSE, e);
             throw new RestClientException("Failed to deserialize mock response configuration", e);
         }
@@ -67,23 +69,14 @@ public class MockClient implements IMockControlApi {
      * Resets the emulator state by clearing all mocked data for the session.
      *
      * @param token the security token.
-     * @return {@code true} if the server confirms the deletion; {@code false} otherwise.
+     * @return always {@code true} — a rejected clear surfaces as an exception.
+     * @throws ApiHttpStatusException if the server rejected the request.
      */
     @Override
     public boolean isResponseClear(String token) {
-        Map<String, String> headers = createHeaders(token);
-
-        try {
-            if (clientApi.delete(URL_BANK_CARD_DATA, headers)) {
-                log.info("Mock response state cleared successfully.");
-                return true;
-            }
-        } catch (Exception e) {
-            log.error("Technical error during mock clearing: {}", e.getMessage());
-        }
-
-        log.error(FAILED_TO_CLEAR_MOCK_RESPONSE);
-        return false;
+        clientApi.delete(URL_BANK_CARD_DATA, createHeaders(token));
+        log.info("Mock response state cleared successfully.");
+        return true;
     }
 
     /**
@@ -91,20 +84,14 @@ public class MockClient implements IMockControlApi {
      *
      * @param token  the security token.
      * @param cardId the unique ID of the card to remove.
-     * @return an {@link Optional} with the deleted ID if successful, empty otherwise.
+     * @return the deleted ID, always present — a missing card surfaces as a 404.
+     * @throws ApiHttpStatusException if the card does not exist or the request was rejected.
      */
     @Override
     public Optional<Long> deleteApiBankCardById(String token, Long cardId) {
-        Map<String, String> headers = createHeaders(token);
-        String url = URL_BANK_CARD_DATA + "/" + cardId;
-
-        if (clientApi.delete(url, headers)) {
-            log.info("Successfully deleted mock card with ID: [{}]", cardId);
-            return Optional.of(cardId);
-        }
-
-        log.error("Failed to delete mock card with ID: [{}]", cardId);
-        return Optional.empty();
+        clientApi.delete(URL_BANK_CARD_DATA + "/" + cardId, createHeaders(token));
+        log.info("Successfully deleted mock card with ID: [{}]", cardId);
+        return Optional.of(cardId);
     }
 
     /**
