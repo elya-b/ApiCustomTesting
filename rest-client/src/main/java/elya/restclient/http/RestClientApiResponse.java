@@ -1,4 +1,4 @@
-package elya.restclient.objects.response;
+package elya.restclient.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.*;

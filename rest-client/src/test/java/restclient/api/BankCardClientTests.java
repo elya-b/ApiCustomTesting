@@ -1,10 +1,10 @@
-package api;
+package restclient.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.api.BankCardClient;
+import elya.restclient.api.BankCardClient;
 import elya.dto.bankcard.BankCardListResponse;
-import elya.interfaces.IRestClientApi;
+import elya.restclient.http.IRestClientApi;
 import elya.restclient.exceptions.RestClientException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
 /**
- * Unit tests (Mockito) for {@link elya.api.BankCardClient}.
+ * Unit tests (Mockito) for {@link BankCardClient}.
  * <ul>
  *   <li>{@code getApiBankCards()} — returns a list of cards for a valid response</li>
  *   <li>{@code getApiBankCards()} — throws RestClientException when response is null</li>

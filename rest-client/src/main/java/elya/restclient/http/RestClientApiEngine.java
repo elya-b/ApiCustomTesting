@@ -1,13 +1,10 @@
-package elya.api;
+package elya.restclient.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.ApiEmulatorHttpStatusInfoGenerator;
-import elya.interfaces.IRestClientApi;
-import elya.interfaces.IRestClientApiEngine;
 import elya.restclient.exceptions.ApiHttpStatusException;
 import elya.restclient.exceptions.RestClientException;
-import elya.restclient.objects.response.RestClientApiResponse;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
@@ -23,9 +20,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static elya.constants.enums.HttpHeaderValues.APPLICATION_JSON;
+import static elya.constants.enums.HttpHeaderValues.*;
 import static elya.restclient.constants.logs.ErrorLogs.*;
-import static elya.restclient.constants.logs.ExceptionMessage.*;
+import static elya.restclient.constants.messages.ExceptionMessages.*;
 import static org.springframework.http.HttpHeaders.*;
 
 /**

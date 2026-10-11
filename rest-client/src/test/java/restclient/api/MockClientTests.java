@@ -1,13 +1,13 @@
-package api;
+package restclient.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.api.MockClient;
+import elya.restclient.api.MockClient;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardRequest;
 import elya.dto.bankcard.BankCardResponse;
-import elya.interfaces.IRestClientApi;
+import elya.restclient.http.IRestClientApi;
 import elya.restclient.exceptions.ApiHttpStatusException;
 import elya.restclient.exceptions.RestClientException;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +26,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests (Mockito) for {@link elya.api.MockClient}.
+ * Unit tests (Mockito) for {@link MockClient}.
  * <ul>
  *   <li>{@code setMockResponse()} — returns a response object when the server returns content</li>
  *   <li>{@code setMockResponse()} — returns null when server response is null</li>

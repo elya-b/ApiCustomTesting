@@ -1,10 +1,10 @@
-package api;
+package restclient.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import elya.ApiEmulatorHttpStatusInfoGenerator;
-import elya.api.RestClientApiEngine;
+import elya.restclient.http.RestClientApiEngine;
 import elya.restclient.exceptions.ApiHttpStatusException;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,7 +24,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 
 /**
- * Unit tests for {@link elya.api.RestClientApiEngine} using an embedded JDK {@link com.sun.net.httpserver.HttpServer}.
+ * Unit tests for {@link RestClientApiEngine} using an embedded JDK {@link com.sun.net.httpserver.HttpServer}.
  * <ul>
  *   <li>{@code get()} — returns a JsonNode for a successful response (200)</li>
  *   <li>{@code get()} — throws ApiHttpStatusException with status 500 for a server error</li>

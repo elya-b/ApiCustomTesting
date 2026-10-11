@@ -21,11 +21,6 @@
     <dependencies>
         <dependency>
             <groupId>elya</groupId>
-            <artifactId>http-support</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>elya</groupId>
             <artifactId>api-contracts</artifactId>
         </dependency>
 

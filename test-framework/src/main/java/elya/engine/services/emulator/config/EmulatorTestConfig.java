@@ -2,10 +2,11 @@ package elya.engine.services.emulator.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.ApiEmulatorHttpStatusInfoGenerator;
-import elya.api.*;
 import elya.credentials.ApiEmulatorCredentialsService;
 import elya.credentials.ApiEmulatorCredentialsStructure;
-import elya.interfaces.IRestClientApi;
+import elya.restclient.api.*;
+import elya.restclient.http.IRestClientApi;
+import elya.restclient.http.RestClientApiEngine;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.*;
 import org.springframework.web.client.RestTemplate;

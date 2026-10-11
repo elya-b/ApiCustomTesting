@@ -1,7 +1,6 @@
-package elya.interfaces;
+package elya.restclient.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import elya.restclient.objects.response.RestClientApiResponse;
 import org.springframework.http.HttpMethod;
 
 import java.util.Map;

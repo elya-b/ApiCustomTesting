@@ -1,4 +1,4 @@
-package elya.interfaces;
+package elya.restclient.http;
 
 /**
  * Unified interface for REST API operations.
