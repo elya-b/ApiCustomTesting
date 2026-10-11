@@ -1,7 +1,7 @@
-package repository;
+package emulator.repository;
 
 import elya.emulator.objects.TokenRecord;
-import elya.repository.SessionRepository;
+import elya.emulator.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 /**
- * Unit tests for {@link elya.repository.SessionRepository}.
+ * Unit tests for {@link SessionRepository}.
  * <ul>
  *   <li>{@code save()} — persists the session and creates a file on disk</li>
  *   <li>{@code delete()} — removes the session and updates the file</li>

@@ -1,4 +1,4 @@
-package elya.repository;
+package elya.emulator.repository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

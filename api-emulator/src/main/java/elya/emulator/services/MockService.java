@@ -1,4 +1,4 @@
-package elya.services;
+package elya.emulator.services;
 
 import elya.ApiEmulatorHttpStatusInfoGenerator;
 import elya.apicontracts.IBankCardApi;
@@ -7,7 +7,7 @@ import elya.card.BankCard;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardResponse;
-import elya.repository.MockRepository;
+import elya.emulator.repository.MockRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;

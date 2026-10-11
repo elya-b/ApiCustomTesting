@@ -1,6 +1,8 @@
+package emulator.web;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.ApiEmulator;
-import elya.ApiEmulatorController;
+import elya.emulator.web.ApiEmulatorController;
 import elya.card.constants.CardType;
 import elya.card.constants.Currency;
 import elya.dto.auth.AuthRequest;
@@ -9,9 +11,9 @@ import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardRequest;
 import elya.dto.bankcard.BankCardResponse;
-import elya.emulator.constants.excpetions.TokenValidationException;
-import elya.services.AuthenticationService;
-import elya.services.MockService;
+import elya.emulator.exceptions.TokenValidationException;
+import elya.emulator.services.AuthenticationService;
+import elya.emulator.services.MockService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Unit tests (WebMvcTest) for {@link elya.ApiEmulatorController}.
+ * Unit tests (WebMvcTest) for {@link ApiEmulatorController}.
  * <ul>
  *   <li>GET /bank-cards/data — returns a list of cards (200)</li>
  *   <li>GET /bank-cards/data — returns an empty list (200)</li>

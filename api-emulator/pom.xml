@@ -21,11 +21,6 @@
     <dependencies>
         <dependency>
             <groupId>elya</groupId>
-            <artifactId>http-support</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>elya</groupId>
             <artifactId>api-contracts</artifactId>
         </dependency>
 
@@ -48,6 +43,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt</artifactId>
         </dependency>
 
         <dependency>

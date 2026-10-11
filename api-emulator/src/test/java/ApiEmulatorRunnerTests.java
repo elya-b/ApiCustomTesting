@@ -1,5 +1,5 @@
 import elya.ApiEmulatorRunner;
-import elya.repository.SessionRepository;
+import elya.emulator.repository.SessionRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
