@@ -1,4 +1,4 @@
-package elya.interfaces;
+package elya.restclient.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Map;

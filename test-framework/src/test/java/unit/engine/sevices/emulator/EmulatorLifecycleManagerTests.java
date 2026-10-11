@@ -6,7 +6,7 @@ import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
 import elya.dto.auth.AuthResponseData;
 import elya.engine.services.emulator.EmulatorLifecycleManager;
-import elya.interfaces.IRestClientApi;
+import elya.restclient.http.IRestClientApi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

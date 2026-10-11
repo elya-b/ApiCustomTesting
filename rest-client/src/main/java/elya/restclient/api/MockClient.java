@@ -1,4 +1,4 @@
-package elya.api;
+package elya.restclient.api;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.apicontracts.IMockControlApi;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
-import elya.interfaces.IRestClientApi;
+import elya.restclient.http.IRestClientApi;
 import elya.restclient.exceptions.ApiHttpStatusException;
 import elya.restclient.exceptions.RestClientException;
 import lombok.extern.slf4j.Slf4j;

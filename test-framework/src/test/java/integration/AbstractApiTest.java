@@ -3,7 +3,7 @@ package integration;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.annotations.ApiIntegrationTest;
-import elya.api.RestClientApi;
+import elya.restclient.api.RestClientApi;
 import elya.constants.Role;
 import elya.credentials.ApiEmulatorCredentialsService;
 import elya.dto.auth.AuthRequest;

@@ -1,4 +1,4 @@
-package elya.api;
+package elya.restclient.api;
 
 import elya.apicontracts.IAuthApi;
 import elya.apicontracts.IBankCardApi;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static elya.restclient.constants.logs.ExceptionMessage.*;
+import static elya.restclient.constants.messages.ExceptionMessages.*;
 
 /**
  * Unified entry point for all bank-related API operations.

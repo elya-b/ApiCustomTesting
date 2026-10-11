@@ -1,4 +1,4 @@
-package elya.interfaces;
+package elya.restclient.http;
 
 import elya.restclient.exceptions.ApiHttpStatusException;
 import elya.restclient.exceptions.RestClientException;

@@ -1,4 +1,4 @@
-package elya.restclient.constants.logs;
+package elya.restclient.constants.messages;
 
 import lombok.experimental.UtilityClass;
 
@@ -9,7 +9,7 @@ import lombok.experimental.UtilityClass;
  * identifier is appended at the throw site.</p>
  */
 @UtilityClass
-public class ExceptionMessage {
+public class ExceptionMessages {
 
     /** Error prefix used when a card deletion operation fails on the server side. */
     public static final String CAN_NOT_DELETE_CARD_WITH_ID =

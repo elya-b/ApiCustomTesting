@@ -1,13 +1,12 @@
-package elya.api;
+package elya.restclient.api;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.RestClientApiHelper;
 import elya.apicontracts.IBankCardApi;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardResponse;
-import elya.interfaces.IRestClientApi;
+import elya.restclient.http.IRestClientApi;
 import elya.restclient.exceptions.ApiHttpStatusException;
 import elya.restclient.exceptions.RestClientException;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +21,7 @@ import static elya.constants.ApiEndpoints.*;
 import static elya.constants.enums.HttpHeaderValues.*;
 import static elya.enums.responsemodel.ApiBankCards.*;
 import static elya.restclient.constants.logs.ErrorLogs.*;
-import static elya.restclient.constants.logs.ExceptionMessage.*;
+import static elya.restclient.constants.messages.ExceptionMessages.*;
 import static org.springframework.http.HttpHeaders.*;
 
 /**

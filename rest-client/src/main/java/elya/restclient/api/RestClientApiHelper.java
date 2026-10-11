@@ -1,4 +1,4 @@
-package elya;
+package elya.restclient.api;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;

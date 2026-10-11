@@ -1,12 +1,12 @@
-package api;
+package restclient.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import elya.api.AuthClient;
+import elya.restclient.api.AuthClient;
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
-import elya.interfaces.IRestClientApi;
+import elya.restclient.http.IRestClientApi;
 import elya.restclient.exceptions.RestClientException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,14 +20,14 @@ import static elya.constants.ApiEndpoints.URL_TOKEN;
 import static elya.constants.enums.JsonProperty.LOGIN;
 import static elya.constants.enums.JsonProperty.PASSWORD;
 import static elya.enums.responsemodel.AuthToken.SUCCESS;
-import static elya.restclient.constants.logs.ExceptionMessage.GENERATE_TOKEN_EXCEPTION;
+import static elya.restclient.constants.messages.ExceptionMessages.GENERATE_TOKEN_EXCEPTION;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests (Mockito) for {@link elya.api.AuthClient}.
+ * Unit tests (Mockito) for {@link AuthClient}.
  * <ul>
  *   <li>{@code generateAuthToken()} — returns AuthResponse for valid credentials</li>
  *   <li>{@code generateAuthToken()} — throws RestClientException when response is null</li>

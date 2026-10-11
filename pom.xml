@@ -31,7 +31,6 @@
         <module>rest-client</module>
         <module>test-framework</module>
         <module>properties</module>
-        <module>http-support</module>
         <module>api-emulator-autoconfigure</module>
         <module>api-contracts</module>
     </modules>
@@ -56,11 +55,6 @@
             <dependency>
                 <groupId>elya</groupId>
                 <artifactId>properties</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>elya</groupId>
-                <artifactId>http-support</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
