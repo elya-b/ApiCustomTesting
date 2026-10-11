@@ -1,7 +1,7 @@
-package repository;
+package emulator.repository;
 
 import elya.dto.bankcard.BankCardListResponse;
-import elya.repository.MockRepository;
+import elya.emulator.repository.MockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 /**
- * Unit tests for {@link elya.repository.MockRepository}.
+ * Unit tests for {@link MockRepository}.
  * <ul>
  *   <li>{@code save()} — persists data in memory and creates a file on disk</li>
  *   <li>{@code find()} — returns an empty Optional when the token does not exist</li>

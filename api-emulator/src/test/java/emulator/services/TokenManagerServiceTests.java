@@ -1,9 +1,9 @@
-package services;
+package emulator.services;
 
-import elya.emulator.constants.excpetions.TokenValidationException;
+import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.objects.TokenRecord;
-import elya.repository.SessionRepository;
-import elya.services.TokenManagerService;
+import elya.emulator.repository.SessionRepository;
+import elya.emulator.services.TokenManagerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,15 +17,15 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
-import static elya.emulator.constants.excpetions.ExceptionMessage.AUTH_TOKEN_IS_EXPIRED;
-import static elya.emulator.constants.excpetions.ExceptionMessage.AUTH_TOKEN_VALIDATION_FAILED;
+import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_IS_EXPIRED;
+import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_VALIDATION_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.argThat;
 
 /**
- * Unit tests (Mockito) for {@link elya.services.TokenManagerService}.
+ * Unit tests (Mockito) for {@link TokenManagerService}.
  * <ul>
  *   <li>{@code validateAuthToken()} — success: token exists and is not expired</li>
  *   <li>{@code validateAuthToken()} — failure: token not found in the repository</li>

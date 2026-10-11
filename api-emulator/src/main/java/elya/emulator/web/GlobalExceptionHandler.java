@@ -1,6 +1,8 @@
-package elya.emulator.constants.excpetions;
+package elya.emulator.web;
 
 import elya.dto.auth.AuthResponse;
+import elya.emulator.exceptions.ApiEmulatorException;
+import elya.emulator.exceptions.TokenValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;

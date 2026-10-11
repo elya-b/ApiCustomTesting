@@ -1,4 +1,4 @@
-package integration;
+package emulator.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.card.constants.CardType;
@@ -9,11 +9,10 @@ import elya.dto.auth.AuthResponse;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardRequest;
-import elya.repository.MockRepository;
-import elya.repository.SessionRepository;
-import elya.services.MockService;
+import elya.emulator.repository.MockRepository;
+import elya.emulator.repository.SessionRepository;
+import elya.emulator.services.MockService;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

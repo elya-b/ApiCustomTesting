@@ -1,4 +1,4 @@
-package elya.emulator.constants.excpetions;
+package elya.emulator.constants.messages;
 
 import lombok.experimental.UtilityClass;
 
@@ -8,7 +8,7 @@ import lombok.experimental.UtilityClass;
  * across different services and simplify maintenance of localized or technical messages.</p>
  */
 @UtilityClass
-public class ExceptionMessage {
+public class ExceptionMessages {
 
     /**
      * Error message for cases where the provided authentication token

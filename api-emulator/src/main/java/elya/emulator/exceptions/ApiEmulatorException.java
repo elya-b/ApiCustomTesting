@@ -1,4 +1,4 @@
-package elya.emulator.constants.excpetions;
+package elya.emulator.exceptions;
 
 import lombok.Getter;
 import org.springframework.http.HttpStatus;

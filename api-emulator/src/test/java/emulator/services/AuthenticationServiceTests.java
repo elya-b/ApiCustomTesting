@@ -1,13 +1,13 @@
-package services;
+package emulator.services;
 
 import elya.credentials.ApiEmulatorCredentialsService;
 import elya.credentials.ApiEmulatorCredentialsStructure;
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
-import elya.emulator.constants.excpetions.TokenValidationException;
+import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.tokens.TokenProvider;
-import elya.services.AuthenticationService;
-import elya.services.TokenManagerService;
+import elya.emulator.services.AuthenticationService;
+import elya.emulator.services.TokenManagerService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +28,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests (Mockito) for {@link elya.services.AuthenticationService}.
+ * Unit tests (Mockito) for {@link AuthenticationService}.
  * <ul>
  *   <li>Successful authentication — full token generation flow</li>
  *   <li>Failure on login or password mismatch (parameterized)</li>

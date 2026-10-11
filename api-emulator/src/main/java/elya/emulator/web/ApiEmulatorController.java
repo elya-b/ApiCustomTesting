@@ -1,12 +1,12 @@
-package elya;
+package elya.emulator.web;
 
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
-import elya.emulator.constants.excpetions.TokenValidationException;
-import elya.services.AuthenticationService;
-import elya.services.MockService;
+import elya.emulator.exceptions.TokenValidationException;
+import elya.emulator.services.AuthenticationService;
+import elya.emulator.services.MockService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

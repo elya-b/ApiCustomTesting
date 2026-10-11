@@ -1,13 +1,13 @@
-package services;
+package emulator.services;
 
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardRequest;
 import elya.dto.bankcard.BankCardResponse;
-import elya.emulator.constants.excpetions.TokenValidationException;
-import elya.repository.MockRepository;
-import elya.services.MockService;
-import elya.services.TokenManagerService;
+import elya.emulator.exceptions.TokenValidationException;
+import elya.emulator.repository.MockRepository;
+import elya.emulator.services.MockService;
+import elya.emulator.services.TokenManagerService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,13 +19,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static elya.emulator.constants.excpetions.ExceptionMessage.AUTH_TOKEN_VALIDATION_FAILED;
+import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_VALIDATION_FAILED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests (Mockito) for {@link elya.services.MockService}.
+ * Unit tests (Mockito) for {@link MockService}.
  * <ul>
  *   <li>{@code getApiBankCards()} — returns a card list for a valid token</li>
  *   <li>{@code getApiBankCards()} — returns an empty response when no mock is found</li>

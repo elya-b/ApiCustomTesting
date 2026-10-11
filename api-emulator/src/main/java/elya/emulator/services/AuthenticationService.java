@@ -1,10 +1,10 @@
-package elya.services;
+package elya.emulator.services;
 
 import elya.apicontracts.IAuthApi;
 import elya.credentials.ApiEmulatorCredentialsService;
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
-import elya.emulator.constants.excpetions.TokenValidationException;
+import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.constants.formats.DataTransformer;
 import elya.emulator.tokens.TokenProvider;
 import lombok.RequiredArgsConstructor;

@@ -1,8 +1,8 @@
-package elya.services;
+package elya.emulator.services;
 
-import elya.emulator.constants.excpetions.TokenValidationException;
+import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.objects.TokenRecord;
-import elya.repository.SessionRepository;
+import elya.emulator.repository.SessionRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
@@ -11,8 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import static elya.emulator.constants.excpetions.ExceptionMessage.AUTH_TOKEN_IS_EXPIRED;
-import static elya.emulator.constants.excpetions.ExceptionMessage.AUTH_TOKEN_VALIDATION_FAILED;
+import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_IS_EXPIRED;
+import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_VALIDATION_FAILED;
 import static elya.emulator.constants.logs.ApiInfoLogs.TOKEN_VALIDATION_SERVICE_START;
 import static elya.emulator.constants.logs.ApiInfoLogs.TOKEN_VALIDATION_SERVICE_STOP;
 
