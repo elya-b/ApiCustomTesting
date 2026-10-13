@@ -1,6 +1,7 @@
 package elya;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -9,6 +10,7 @@ import org.springframework.context.ConfigurableApplicationContext;
  * Provides granular control over the application lifecycle, including programmatically starting
  * and stopping the instance within a testing environment.
  */
+@Slf4j
 public class ApiEmulatorRunner {
     private final int initialPort;
 
@@ -53,7 +55,11 @@ public class ApiEmulatorRunner {
             this.actualPort = appContext.getEnvironment()
                     .getProperty("local.server.port", Integer.class, initialPort);
 
-            logBanner();
+            log.info("""
+                
+                ==========================================
+                  🚀 EMULATOR STARTED ON PORT: {}
+                ==========================================""", actualPort);
         }
     }
 
@@ -64,7 +70,11 @@ public class ApiEmulatorRunner {
     public void stop() {
         if (appContext != null) {
             SpringApplication.exit(appContext);
-            System.out.println("🛑 Emulator on port " + actualPort + " stopped.");
+            log.info("""
+                
+                ==========================================
+                  🛑 EMULATOR STOPPED, PORT {} RELEASED
+                ==========================================""", actualPort);
             this.appContext = null;
         }
     }
@@ -76,16 +86,6 @@ public class ApiEmulatorRunner {
      */
     public boolean isRunning() {
         return appContext != null && appContext.isRunning();
-    }
-
-    /**
-     * Prints a visual startup confirmation to the system console.
-     * Displays the final bound port for debugging purposes.
-     */
-    private void logBanner() {
-        System.out.println("\n##########################################");
-        System.out.println("#   🚀 EMULATOR STARTED ON PORT: " + actualPort + "    #");
-        System.out.println("##########################################\n");
     }
 
     /**

@@ -30,13 +30,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static elya.constants.ApiEndpoints.*;
-import static elya.constants.enums.HttpHeaderValues.BEARER;
+import static elya.constants.enums.HttpHeaderValues.*;
 import static elya.engine.services.emulator.constants.exceptions.Exceptions.*;
-import static elya.engine.services.emulator.constants.logs.InfoLogs.EMULATOR_IS_READY;
-import static elya.engine.services.emulator.constants.logs.InfoLogs.MANAGER_START;
-import static elya.enums.responsemodel.ApiBankCards.CARDS;
-import static elya.enums.responsemodel.ApiBankCards.RESPONSE;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static elya.engine.services.emulator.constants.logs.InfoLogs.*;
+import static elya.enums.responsemodel.ApiBankCards.*;
+import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Orchestrator for managing the API Emulator lifecycle within the testing framework.
@@ -73,7 +71,7 @@ public class EmulatorLifecycleManager {
     private final RestTemplate restTemplate;
 
     /**
-     * Constructs the manager and binds it to a fixed port runner.
+     * Constructs the manager and binds it to a runner that picks a free port.
      *
      * @param restClient   low-level client for API interactions.
      * @param objectMapper Jackson mapper for data conversion.
@@ -82,7 +80,7 @@ public class EmulatorLifecycleManager {
     public EmulatorLifecycleManager(IRestClientApi restClient,
                                     ObjectMapper objectMapper,
                                     RestTemplate restTemplate) {
-        this.runner = new ApiEmulatorRunner(8080);
+        this.runner = new ApiEmulatorRunner(0);
         this.restClient = restClient;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
@@ -113,6 +111,7 @@ public class EmulatorLifecycleManager {
         runner.start();
         int port = runner.getActualPort();
         this.url = "http://localhost:" + port;
+        log.info(MANAGER_READY_ON_PORT, port);
 
         if (restClient instanceof RestClientApiEngine engine) {
             engine.setBaseUrl(this.url);
