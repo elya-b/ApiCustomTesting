@@ -15,8 +15,9 @@ public class InfoLogs {
      */
     public static final String EMULATOR_IS_READY = "Emulator is ready";
 
-    /** * Logged when the Lifecycle Manager starts.
-     * Use with a single placeholder for the port number (e.g., 8080).
-     */
-    public static final String MANAGER_START = "MANAGER: Lifecycle START. Manager is ready on port {}";
+    /** Logged when the Lifecycle Manager bean is initialized. */
+    public static final String MANAGER_START = "MANAGER: Lifecycle START.";
+
+    /** Logged once the emulator is bound. Takes the port number as the single argument. */
+    public static final String MANAGER_READY_ON_PORT = "MANAGER: ready on port {}";
 }
