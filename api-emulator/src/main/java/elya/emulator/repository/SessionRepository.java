@@ -14,8 +14,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static elya.emulator.constants.logs.ApiErrorLogs.*;
-import static elya.emulator.constants.logs.ApiInfoLogs.*;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
 
 /**
  * Repository for managing active emulator sessions.

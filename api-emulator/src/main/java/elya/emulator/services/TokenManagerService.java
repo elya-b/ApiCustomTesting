@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 
 import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_IS_EXPIRED;
 import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_VALIDATION_FAILED;
-import static elya.emulator.constants.logs.ApiInfoLogs.TOKEN_VALIDATION_SERVICE_START;
-import static elya.emulator.constants.logs.ApiInfoLogs.TOKEN_VALIDATION_SERVICE_STOP;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.TOKEN_VALIDATION_SERVICE_START;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.TOKEN_VALIDATION_SERVICE_STOP;
 
 /**
  * Service for managing the lifecycle of authentication tokens.

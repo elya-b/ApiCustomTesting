@@ -15,9 +15,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static elya.emulator.constants.logs.ApiErrorLogs.*;
-import static elya.emulator.constants.logs.ApiInfoLogs.*;
-import static elya.emulator.constants.logs.ApiWarnLogs.*;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
+import static elya.emulator.constants.logs.EmulatorWarnLogs.*;
 
 /**
  * Repository for managing persistent mock responses.

@@ -8,7 +8,7 @@ import lombok.experimental.UtilityClass;
  * and simplifies the process of monitoring and debugging system failures.</p>
  */
 @UtilityClass
-public class ApiErrorLogs {
+public class EmulatorErrorLogs {
 
     /** Log message for critical errors during mock data persistence. */
     public static final String ERROR_DURING_MOCK_PERSISTENCE_FOR_TOKEN = "Critical error during mock persistence for token: {}";

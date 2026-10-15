@@ -8,7 +8,7 @@ import lombok.experimental.UtilityClass;
  * do not interrupt the main application flow but may require attention.</p>
  */
 @UtilityClass
-public class ApiWarnLogs {
+public class EmulatorWarnLogs {
 
     /** Logged when a card deletion is requested but the ID does not exist in the state. */
     public static final String CARD_NOT_FOUND_BY_ID_FOR_DELETION = "Card with ID [{}] not found for deletion";

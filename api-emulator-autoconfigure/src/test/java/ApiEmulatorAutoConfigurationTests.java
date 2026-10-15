@@ -1,7 +1,11 @@
 import elya.ApiEmulatorAutoConfiguration;
-import elya.ApiTokenConfig;
+import elya.ApiTokenProperties;
+import elya.constants.exceptions.ApiEmulatorConfigurationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.validation.BindValidationException;
@@ -9,19 +13,22 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-
 /**
- * Unit tests for {@link elya.ApiEmulatorAutoConfiguration}.
+ * Unit tests for {@link ApiEmulatorAutoConfiguration} and {@link ApiTokenProperties}.
  * <ul>
- *   <li>PasswordEncoder and ApiTokenConfig beans are created by default (emulator enabled)</li>
+ *   <li>PasswordEncoder and ApiTokenProperties beans are created by default (emulator enabled)</li>
  *   <li>PasswordEncoder is not created when {@code api.emulator.enabled=false}</li>
- *   <li>Properties are correctly bound to ApiTokenConfig</li>
+ *   <li>Token expiration binds from a bare number (seconds) and from a unit suffix</li>
+ *   <li>ApiTokenProperties falls back to 1h / "api-emulator" when properties are absent</li>
  *   <li>Context fails to start when the users list is empty (BindValidationException)</li>
+ *   <li>Context fails to start when the token expiration is not positive</li>
+ *   <li>ApiTokenProperties rejects a null expiration and a blank issuer</li>
  *   <li>Existing PasswordEncoder bean is not overridden (ConditionalOnMissingBean)</li>
- *   <li>ApiTokenConfig has default values (expiration=0, issuer=null) when properties are absent</li>
  * </ul>
  */
 public class ApiEmulatorAutoConfigurationTests {
@@ -34,11 +41,11 @@ public class ApiEmulatorAutoConfigurationTests {
             );
 
     @Test
-    @DisplayName("Should create PasswordEncoder when property is missing (default behavior)")
+    @DisplayName("Should create PasswordEncoder and ApiTokenProperties by default")
     void shouldCreateBeanByDefault() {
         contextRunner.run(context -> {
             assertThat(context).hasSingleBean(PasswordEncoder.class);
-            assertThat(context).hasSingleBean(ApiTokenConfig.class);
+            assertThat(context).hasSingleBean(ApiTokenProperties.class);
         });
     }
 
@@ -46,14 +53,12 @@ public class ApiEmulatorAutoConfigurationTests {
     @DisplayName("Should NOT create PasswordEncoder when emulator is disabled")
     void shouldNotCreateBeanWhenDisabled() {
         contextRunner.withPropertyValues("api.emulator.enabled=false")
-                .run(context -> {
-                    assertThat(context).doesNotHaveBean(PasswordEncoder.class);
-                });
+                .run(context -> assertThat(context).doesNotHaveBean(PasswordEncoder.class));
     }
 
     @Test
-    @DisplayName("Should correctly bind properties to ApiTokenConfig")
-    void shouldBindProperties() {
+    @DisplayName("Should bind a bare number as seconds")
+    void shouldBindBareNumberAsSeconds() {
         contextRunner
                 .withPropertyValues(
                         "api.credentials.token.expiration=3600",
@@ -61,10 +66,35 @@ public class ApiEmulatorAutoConfigurationTests {
                 )
                 .run(context -> {
                     assertThat(context).hasNotFailed();
-                    ApiTokenConfig config = context.getBean(ApiTokenConfig.class);
-                    assertEquals(3600, config.getExpiration());
-                    assertEquals("issuer", config.getIssuer());
+                    ApiTokenProperties properties = context.getBean(ApiTokenProperties.class);
+                    assertEquals(Duration.ofHours(1), properties.expiration());
+                    assertEquals("issuer", properties.issuer());
                 });
+    }
+
+    @Test
+    @DisplayName("Should bind a duration with a unit suffix")
+    void shouldBindDurationWithUnitSuffix() {
+        contextRunner
+                .withPropertyValues("api.credentials.token.expiration=90m")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertEquals(Duration.ofMinutes(90),
+                            context.getBean(ApiTokenProperties.class).expiration());
+                });
+    }
+
+    @Test
+    @DisplayName("Should use default ApiTokenProperties values when properties are not set")
+    void shouldUseDefaultApiTokenPropertiesValues() {
+        contextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            ApiTokenProperties properties = context.getBean(ApiTokenProperties.class);
+            assertEquals(Duration.ofHours(1), properties.expiration(),
+                    "Default expiration must be 1 hour when property is not set");
+            assertEquals("api-emulator", properties.issuer(),
+                    "Default issuer must be 'api-emulator' when property is not set");
+        });
     }
 
     @Test
@@ -77,6 +107,35 @@ public class ApiEmulatorAutoConfigurationTests {
                     assertThat(context).getFailure()
                             .hasRootCauseInstanceOf(BindValidationException.class);
                 });
+    }
+
+    @ParameterizedTest(name = "expiration={0}")
+    @ValueSource(strings = {"0", "-60"})
+    @DisplayName("Should fail to start when token expiration is not positive")
+    void shouldFailWhenExpirationIsNotPositive(String expiration) {
+        contextRunner
+                .withPropertyValues("api.credentials.token.expiration=" + expiration)
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context).getFailure()
+                            .hasRootCauseInstanceOf(ApiEmulatorConfigurationException.class);
+                });
+    }
+
+    @Test
+    @DisplayName("Should reject a null expiration")
+    void shouldRejectNullExpiration() {
+        assertThrows(ApiEmulatorConfigurationException.class,
+                () -> new ApiTokenProperties(null, "issuer"));
+    }
+
+    @ParameterizedTest(name = "issuer=''{0}''")
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("Should reject a blank issuer")
+    void shouldRejectBlankIssuer(String issuer) {
+        assertThrows(ApiEmulatorConfigurationException.class,
+                () -> new ApiTokenProperties(Duration.ofHours(1), issuer));
     }
 
     // --- ADDITIONAL CASES ---
@@ -93,20 +152,6 @@ public class ApiEmulatorAutoConfigurationTests {
                     assertTrue(encoder.matches("raw", encoder.encode("raw")),
                             "Must use the custom encoder, not the default NoOp one");
                 });
-    }
-
-    @Test
-    @DisplayName("Should use default ApiTokenConfig values when properties are not set")
-    void shouldUseDefaultApiTokenConfigValues() {
-        contextRunner.run(context -> {
-            assertThat(context).hasNotFailed();
-            ApiTokenConfig config = context.getBean(ApiTokenConfig.class);
-            // expiration defaults to 0 (int default) and issuer to null when not configured
-            assertEquals(0, config.getExpiration(),
-                    "Default expiration must be 0 when property is not set");
-            assertNull(config.getIssuer(),
-                    "Default issuer must be null when property is not set");
-        });
     }
 
     @Configuration
