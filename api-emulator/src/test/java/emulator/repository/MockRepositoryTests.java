@@ -1,6 +1,7 @@
 package emulator.repository;
 
 import elya.dto.bankcard.BankCardListResponse;
+import elya.dto.bankcard.BankCardResponse;
 import elya.emulator.repository.MockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,8 +12,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,6 +35,10 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>{@code clearAll()} — removes all data from memory</li>
  *   <li>{@code clearAll()} — deletes the persistence file from disk</li>
  *   <li>{@code clearAll()} — does not throw when the file does not exist</li>
+ *   <li>{@code update()} — inserts the new value when nothing is stored</li>
+ *   <li>{@code update()} — replaces the stored value with the one built from it</li>
+ *   <li>{@code update()} — leaves storage untouched when the change declines to write</li>
+ *   <li>{@code update()} — retries on top of a concurrent write instead of overwriting it</li>
  * </ul>
  */
 public class MockRepositoryTests {
@@ -195,5 +202,86 @@ public class MockRepositoryTests {
 
         assertDoesNotThrow(() -> repository.clearAll(),
                 "clearAll must not throw even when there is no file to delete");
+    }
+
+    // --- UPDATE (COMPARE-AND-SET) TESTS ---
+
+    @Test
+    @DisplayName("update() - Should insert the new value when nothing is stored")
+    void update_ShouldInsert_WhenNothingStored() {
+        BankCardListResponse next = BankCardListResponse.of(List.of(card(1L)));
+
+        Optional<BankCardListResponse> written = repository.update(TOKEN, current -> {
+            assertTrue(current.isEmpty(), "Nothing should be stored yet");
+            return Optional.of(next);
+        });
+
+        assertAll(
+                () -> assertSame(next, written.orElseThrow()),
+                () -> assertSame(next, repository.find(TOKEN).orElseThrow()),
+                () -> assertTrue(new File(fullPath).exists(), "A successful write must be persisted")
+        );
+    }
+
+    @Test
+    @DisplayName("update() - Should replace the stored value with the one built from it")
+    void update_ShouldReplace_WhenValueStored() {
+        repository.save(TOKEN, BankCardListResponse.of(List.of(card(1L))));
+
+        repository.update(TOKEN, current -> {
+            List<BankCardResponse> cards = new ArrayList<>(current.orElseThrow().getResponse().getCards());
+            cards.add(card(2L));
+            return Optional.of(BankCardListResponse.of(cards));
+        });
+
+        assertEquals(List.of(1L, 2L), cardIds(repository.find(TOKEN).orElseThrow()));
+    }
+
+    @Test
+    @DisplayName("update() - Should leave storage untouched when the change declines to write")
+    void update_ShouldNotWrite_WhenChangeReturnsEmpty() {
+        BankCardListResponse original = BankCardListResponse.of(List.of(card(1L)));
+        repository.save(TOKEN, original);
+
+        Optional<BankCardListResponse> written = repository.update(TOKEN, current -> Optional.empty());
+
+        assertAll(
+                () -> assertTrue(written.isEmpty()),
+                () -> assertSame(original, repository.find(TOKEN).orElseThrow())
+        );
+    }
+
+    @Test
+    @DisplayName("update() - Should retry on top of a concurrent write instead of overwriting it")
+    void update_ShouldRetry_WhenAnotherWriterInterferes() {
+        repository.save(TOKEN, BankCardListResponse.of(List.of(card(1L))));
+        AtomicInteger attempts = new AtomicInteger();
+
+        repository.update(TOKEN, current -> {
+            if (attempts.incrementAndGet() == 1) {
+                // Another writer sneaks in between our read and our compare-and-set
+                repository.save(TOKEN, BankCardListResponse.of(List.of(card(1L), card(2L))));
+            }
+            List<BankCardResponse> cards = new ArrayList<>(current.orElseThrow().getResponse().getCards());
+            cards.add(card(3L));
+            return Optional.of(BankCardListResponse.of(cards));
+        });
+
+        assertAll(
+                () -> assertEquals(2, attempts.get(),
+                        "The first attempt must lose the race and be retried"),
+                () -> assertEquals(List.of(1L, 2L, 3L), cardIds(repository.find(TOKEN).orElseThrow()),
+                        "The retry must build on the concurrent write, not overwrite it")
+        );
+    }
+
+    private static BankCardResponse card(long id) {
+        return BankCardResponse.builder().cardId(id).build();
+    }
+
+    private static List<Long> cardIds(BankCardListResponse response) {
+        return response.getResponse().getCards().stream()
+                .map(BankCardResponse::getCardId)
+                .toList();
     }
 }

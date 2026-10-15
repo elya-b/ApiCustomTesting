@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 import static elya.emulator.constants.logs.ApiErrorLogs.*;
 import static elya.emulator.constants.logs.ApiInfoLogs.*;
@@ -133,6 +134,37 @@ public class MockRepository {
             objectMapper.writeValue(file, mockedResponses);
         } catch (IOException e) {
             log.error(FAILED_SAVE_SESSION_TO_STORAGE, e);
+        }
+    }
+
+    /**
+     * Atomically applies {@code change} to the response stored for {@code token}.
+     * <p>Optimistic compare-and-set: reads the current value, lets {@code change}
+     * build a new one, and swaps it in only if no other writer replaced the entry
+     * in the meantime; otherwise retries with the fresh value. {@code change} may
+     * therefore run more than once and must be free of side effects.</p>
+     *
+     * @param token  session whose mock response is being changed
+     * @param change pure function from the current value (empty if nothing is stored)
+     *               to the new value, or {@link Optional#empty()} to leave storage untouched
+     * @return the value that was written, or empty if {@code change} chose not to write
+     */
+    public Optional<BankCardListResponse> update(
+            String token,
+            Function<Optional<BankCardListResponse>, Optional<BankCardListResponse>> change) {
+        while (true) {
+            BankCardListResponse current = mockedResponses.get(token);
+            Optional<BankCardListResponse> next = change.apply(Optional.ofNullable(current));
+            if (next.isEmpty()) {
+                return Optional.empty();
+            }
+            boolean swapped = (current == null)
+                    ? mockedResponses.putIfAbsent(token, next.get()) == null
+                    : mockedResponses.replace(token, current, next.get());
+            if (swapped) {
+                saveToFile();
+                return next;
+            }
         }
     }
 }

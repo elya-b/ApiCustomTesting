@@ -53,39 +53,40 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
     }
 
     /**
-     * Updates the persistent mock response by appending new cards to the existing list.
-     * <p>The service automatically calculates the next available {@code cardId}
-     * based on the current maximum ID in the user's session to prevent collisions.</p>
+     * Appends new cards to the session's mock response.
+     * <p>The token is validated first. The append itself goes through
+     * {@link MockRepository#update}, so the next {@code cardId} is computed
+     * from the value actually being replaced: two concurrent requests cannot
+     * hand out the same ID or overwrite each other's cards.</p>
      *
      * @param token   valid session token for identification
-     * @param request the {@link BankCardListRequest} containing new cards to add
+     * @param request the {@link BankCardListRequest} containing new cards to add;
+     *                {@code null}, or a request whose card list is {@code null},
+     *                resets the mock to empty
      * @return        the updated {@link BankCardListResponse} containing all currently mocked cards
      */
     @Override
     public BankCardListResponse setMockResponse(String token, BankCardListRequest request) {
+        tokenManagerService.validateAuthToken(token);
         log.info(PROCESSING_MOCK_UPDATE_REQUEST, token);
 
         if (request == null || request.getCards() == null) {
-            mockRepository.save(token, EMPTY_RESPONSE);
-            return EMPTY_RESPONSE;
+            BankCardListResponse empty = BankCardListResponse.of(List.of());
+            mockRepository.save(token, empty);
+            return empty;
         }
 
-        BankCardListResponse currentWrapper = getApiBankCards(token);
-        List<BankCardResponse> allCardsList = new ArrayList<>(currentWrapper.getResponse().getCards());
+        return mockRepository.update(token, current -> {
+            List<BankCardResponse> cards = current
+                    .map(response -> new ArrayList<>(response.getResponse().getCards()))
+                    .orElseGet(ArrayList::new);
 
-        long nextId = allCardsList.stream()
-                .mapToLong(BankCardResponse::getCardId)
-                .max()
-                .orElse(0L) + 1;
-
-        for (var req : request.getCards()) {
-            BankCard domain = req.toDomain();
-            allCardsList.add(BankCardResponse.fromDomain(domain, nextId++));
-        }
-
-        BankCardListResponse finalResponse = BankCardListResponse.of(allCardsList);
-        mockRepository.save(token, finalResponse);
-        return finalResponse;
+            long nextId = cards.stream().mapToLong(BankCardResponse::getCardId).max().orElse(0L) + 1;
+            for (var req : request.getCards()) {
+                cards.add(BankCardResponse.fromDomain(req.toDomain(), nextId++));
+            }
+            return Optional.of(BankCardListResponse.of(cards));
+        }).orElseThrow();
     }
 
     /**
@@ -101,8 +102,10 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
 
     /**
      * Removes a specific card from the mocked response by its ID.
-     * <p>If the card is found, it is removed from the list, and the updated state
-     * is synchronized with the {@link MockRepository}.</p>
+     * <p>Runs through {@link MockRepository#update}: the response is rebuilt from a
+     * copy of the current list, so {@code size} always matches the cards, and a
+     * concurrent writer cannot be overwritten. Nothing is written when the card
+     * or the whole mock is absent.</p>
      *
      * @param token  Authorization session token
      * @param cardId unique identifier of the card to be removed
@@ -111,21 +114,24 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
      */
     @Override
     public Optional<Long> deleteApiBankCardById(String token, Long cardId) {
+        tokenManagerService.validateAuthToken(token);
         log.info(ATTEMPTING_TO_DELETE_CARD_ID_FOR_TOKEN, cardId, token);
 
-        BankCardListResponse currentCards = getApiBankCards(token);
-        boolean removed = currentCards.getResponse().getCards()
-                .removeIf(card -> card.getCardId().equals(cardId));
+        Optional<BankCardListResponse> written = mockRepository.update(token, current ->
+                current.flatMap(response -> {
+                    List<BankCardResponse> remaining = new ArrayList<>(response.getResponse().getCards());
+                    if (!remaining.removeIf(card -> card.getCardId().equals(cardId))) {
+                        return Optional.<BankCardListResponse>empty();
+                    }
+                    return Optional.of(BankCardListResponse.of(remaining));
+                }));
 
-        if (removed) {
-            mockRepository.save(token, currentCards);
-
-            log.info(CARD_WITH_ID_DELETED_SUCCESSFULLY, cardId);
-            return Optional.of(cardId);
+        if (written.isEmpty()) {
+            log.warn(CARD_NOT_FOUND_BY_ID_FOR_DELETION, cardId);
+            return Optional.empty();
         }
-
-        log.warn(CARD_NOT_FOUND_BY_ID_FOR_DELETION, cardId);
-        return Optional.empty();
+        log.info(CARD_WITH_ID_DELETED_SUCCESSFULLY, cardId);
+        return Optional.of(cardId);
     }
 
     /**

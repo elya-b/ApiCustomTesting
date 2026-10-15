@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_VALIDATION_FAILED;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,16 +35,17 @@ import static org.mockito.Mockito.*;
  *   <li>{@code getApiBankCardById()} — returns an empty Optional when the card is not found</li>
  *   <li>{@code clearMockResponse()} — successfully clears the mock</li>
  *   <li>{@code clearMockResponse()} — returns false when the repository fails to clear</li>
- *   <li>{@code deleteApiBankCardById()} — deletes the card and returns its ID</li>
- *   <li>{@code deleteApiBankCardById()} — returns empty Optional when the ID is not found</li>
+ *   <li>{@code deleteApiBankCardById()} — deletes the card, returns its ID and recalculates size</li>
+ *   <li>{@code deleteApiBankCardById()} — writes nothing when the ID is not found</li>
+ *   <li>{@code deleteApiBankCardById()} — writes nothing when no mock is stored for the token</li>
  *   <li>{@code setMockResponse()} — appends cards with incremented IDs</li>
  *   <li>{@code setMockResponse()} — first cards are assigned IDs starting from 1</li>
  *   <li>{@code setMockResponse()} — null request saves an empty response</li>
  *   <li>{@code setMockResponse()} — new ID equals Max ID + 1 even when there are gaps</li>
- *   <li>{@code setMockResponse()} — empty card list saves an empty response</li>
+ *   <li>{@code setMockResponse()} — empty card list keeps the stored cards unchanged</li>
  *   <li>{@code getApiBankCardById()} — propagates TokenValidationException</li>
  *   <li>{@code deleteApiBankCardById()} — propagates TokenValidationException</li>
- *   <li>{@code setMockResponse()} — does not call tokenManagerService directly (validation is delegated)</li>
+ *   <li>{@code setMockResponse()} — propagates TokenValidationException before touching storage</li>
  * </ul>
  */
 @ExtendWith(MockitoExtension.class)
@@ -63,6 +65,9 @@ public class MockServiceTests {
     private static final BankCardListResponse CARD_LIST_RESPONSE = BankCardListResponse.of(List.of(CARD_RESPONSE));
     private static final BankCardRequest CARD_REQUEST = BankCardRequest.builder().build();
     private static final BankCardListRequest DEFAULT_LIST_REQUEST = BankCardListRequest.of(List.of(CARD_REQUEST));
+
+    /** The value the service asked the repository to write, or {@code null} if it declined to write. */
+    private BankCardListResponse written;
 
     // --- GET API BANK CARDS TESTS ---
 
@@ -111,7 +116,6 @@ public class MockServiceTests {
         verify(tokenManagerService).validateAuthToken(TOKEN);
         verify(mockRepository, never()).find(TOKEN);
     }
-
 
     // --- GET API BANK CARDS BY ID TESTS ---
 
@@ -165,37 +169,51 @@ public class MockServiceTests {
     // --- DELETE BANK CARD BY ID TESTS ---
 
     @Test
-    @DisplayName("Successful. Card deleted and returns ID")
+    @DisplayName("Successful. Card deleted, ID returned, size recalculated")
     void deleteApiBankCardById_Success() {
         BankCardResponse card1 = BankCardResponse.builder().cardId(CARD_ID).build();
         BankCardResponse card2 = BankCardResponse.builder().cardId(CARD_ID_2).build();
-        BankCardListResponse existingMock = BankCardListResponse.of(List.of(card1, card2));
-
-        when(mockRepository.find(TOKEN)).thenReturn(Optional.of(existingMock));
-        when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
+        givenStored(BankCardListResponse.of(List.of(card1, card2)));
 
         Optional<Long> result = mockService.deleteApiBankCardById(TOKEN, CARD_ID);
 
-        assertAll("Check delete result",
-                () -> assertTrue(result.isPresent(), "Result should not be empty"),
-                () -> assertEquals(CARD_ID, result.get(), "Should return the ID of deleted card")
+        var container = written.getResponse();
+        assertAll("Verify the stored response after deletion",
+                () -> assertEquals(CARD_ID, result.orElseThrow(),
+                        "Should return the ID of the deleted card"),
+                () -> assertEquals(1, container.getCards().size(),
+                        "One card must remain"),
+                () -> assertEquals(CARD_ID_2, container.getCards().getFirst().getCardId(),
+                        "The surviving card must be the other one"),
+                () -> assertEquals(1, container.getSize(),
+                        "size must be recalculated, not carried over from before the deletion")
         );
-
-        verify(mockRepository).save(eq(TOKEN), argThat(savedResponse ->
-                savedResponse.getResponse().getCards().size() == 1 &&
-                        savedResponse.getResponse().getCards().getFirst().getCardId().equals(CARD_ID_2)
-        ));
     }
 
     @Test
     @DisplayName("Failed. Card was not deleted. ID is not found")
     void deleteApiBankCardById_Failed() {
-        when(mockRepository.find(TOKEN)).thenReturn(Optional.of(CARD_LIST_RESPONSE));
+        givenStored(CARD_LIST_RESPONSE);
 
         Optional<Long> result = mockService.deleteApiBankCardById(TOKEN, CARD_ID_2);
 
-        assertTrue(result.isEmpty(), "Result should be empty because ID was not found");
-        verify(mockRepository, never()).save(anyString(), any());
+        assertAll("Nothing must be written when the card is absent",
+                () -> assertTrue(result.isEmpty(), "Result should be empty because ID was not found"),
+                () -> assertNull(written, "The change function must decline to write")
+        );
+    }
+
+    @Test
+    @DisplayName("Failed. Nothing stored for the token, so nothing is deleted or created")
+    void deleteApiBankCardById_NothingStored() {
+        givenStored(null);
+
+        Optional<Long> result = mockService.deleteApiBankCardById(TOKEN, CARD_ID);
+
+        assertAll("Deleting from an empty session must not create an entry",
+                () -> assertTrue(result.isEmpty(), "Result should be empty"),
+                () -> assertNull(written, "No value must be written for a token without mocks")
+        );
     }
 
     // --- SET MOCK RESPONSE TESTS ---
@@ -204,34 +222,23 @@ public class MockServiceTests {
     @DisplayName("Successful. Set mock response with ID increment")
     void setMockResponse_IncrementId() {
         BankCardListRequest request = BankCardListRequest.of(List.of(CARD_REQUEST, CARD_REQUEST));
-
-        when(mockRepository.find(TOKEN)).thenReturn(Optional.of(CARD_LIST_RESPONSE));
-        when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
+        givenStored(CARD_LIST_RESPONSE);
 
         BankCardListResponse result = mockService.setMockResponse(TOKEN, request);
 
-        assertNotNull(result);
-
-        verify(mockRepository).save(eq(TOKEN), argThat(savedResponse -> {
-            List<BankCardResponse> cards = savedResponse.getResponse().getCards();
-            return cards.size() == 3 &&
-                    cards.get(0).getCardId().equals(CARD_ID) &&
-                    cards.get(1).getCardId().equals(CARD_ID_2) &&
-                    cards.get(2).getCardId() == 3L;
-        }));
+        assertThat(result.getResponse().getCards())
+                .extracting(BankCardResponse::getCardId)
+                .containsExactly(CARD_ID, CARD_ID_2, 3L);
     }
 
     @Test
     @DisplayName("Successful. First cards get ID starting from 1")
     void setMockResponse_FirstCards() {
-        when(mockRepository.find(TOKEN)).thenReturn(Optional.empty());
-        when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
+        givenStored(null);
 
-        mockService.setMockResponse(TOKEN, DEFAULT_LIST_REQUEST);
+        BankCardListResponse result = mockService.setMockResponse(TOKEN, DEFAULT_LIST_REQUEST);
 
-        verify(mockRepository).save(eq(TOKEN), argThat(savedResponse ->
-                savedResponse.getResponse().getCards().getFirst().getCardId()
-                        .equals(CARD_ID)));
+        assertEquals(CARD_ID, result.getResponse().getCards().getFirst().getCardId());
     }
 
     @Test
@@ -254,31 +261,23 @@ public class MockServiceTests {
     void setMockResponse_ShouldHandleGapsInIds() {
         BankCardResponse card1 = BankCardResponse.builder().cardId(CARD_ID).build();
         BankCardResponse card5 = BankCardResponse.builder().cardId(5L).build();
-        BankCardListResponse existingMock = BankCardListResponse.of(List.of(card1, card5));
+        givenStored(BankCardListResponse.of(List.of(card1, card5)));
 
-        when(mockRepository.find(TOKEN)).thenReturn(Optional.of(existingMock));
-        when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
+        BankCardListResponse result = mockService.setMockResponse(TOKEN, DEFAULT_LIST_REQUEST);
 
-        mockService.setMockResponse(TOKEN, DEFAULT_LIST_REQUEST);
-
-        verify(mockRepository).save(eq(TOKEN), argThat(res ->
-                res.getResponse().getCards().get(2).getCardId() == 6L
-        ));
+        assertEquals(6L, result.getResponse().getCards().get(2).getCardId());
     }
 
     @Test
-    @DisplayName("Successful. Should save empty response when cards list in request is null")
-    void setMockResponse_ShouldHandleNullCardsList() {
+    @DisplayName("Successful. Empty card list keeps the stored cards unchanged")
+    void setMockResponse_ShouldHandleEmptyCardsList() {
         BankCardListRequest request = BankCardListRequest.of(Collections.emptyList());
-        when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
+        givenStored(null);
 
         BankCardListResponse result = mockService.setMockResponse(TOKEN, request);
 
         assertNotNull(result);
         assertThat(result.getResponse().getCards()).isEmpty();
-        verify(mockRepository).save(
-                eq(TOKEN), argThat(res -> res.getResponse().getCards().isEmpty())
-        );
     }
 
     // --- TOKEN VALIDATION PROPAGATION ---
@@ -298,7 +297,7 @@ public class MockServiceTests {
     }
 
     @Test
-    @DisplayName("Failed. deleteApiBankCardById() propagates TokenValidationException from getApiBankCards()")
+    @DisplayName("Failed. deleteApiBankCardById() propagates TokenValidationException before touching storage")
     void deleteApiBankCardById_PropagatesTokenValidationException() {
         doThrow(new TokenValidationException(AUTH_TOKEN_VALIDATION_FAILED))
                 .when(tokenManagerService).validateAuthToken(TOKEN);
@@ -307,18 +306,33 @@ public class MockServiceTests {
                 mockService.deleteApiBankCardById(TOKEN, CARD_ID)
         );
 
-        verify(tokenManagerService).validateAuthToken(TOKEN);
-        verify(mockRepository, never()).find(anyString());
+        verifyNoInteractions(mockRepository);
     }
 
     @Test
-    @DisplayName("Successful. setMockResponse() does NOT call tokenManagerService directly")
-    void setMockResponse_DoesNotCallTokenValidation() {
-        when(mockRepository.find(TOKEN)).thenReturn(Optional.empty());
-        when(mockRepository.save(eq(TOKEN), any())).thenReturn(true);
+    @DisplayName("Failed. setMockResponse() propagates TokenValidationException before touching storage")
+    void setMockResponse_PropagatesTokenValidationException() {
+        doThrow(new TokenValidationException(AUTH_TOKEN_VALIDATION_FAILED))
+                .when(tokenManagerService).validateAuthToken(TOKEN);
 
-        mockService.setMockResponse(TOKEN, DEFAULT_LIST_REQUEST);
+        assertThrows(TokenValidationException.class, () ->
+                mockService.setMockResponse(TOKEN, null)
+        );
 
-        verify(tokenManagerService, times(1)).validateAuthToken(TOKEN);
+        verifyNoInteractions(mockRepository);
+    }
+
+    /**
+     * Makes the mocked repository behave like the real {@link MockRepository#update}:
+     * applies the service's change function to {@code stored} and records what it produced.
+     */
+    private void givenStored(BankCardListResponse stored) {
+        when(mockRepository.update(eq(TOKEN), any())).thenAnswer(invocation -> {
+            Function<Optional<BankCardListResponse>, Optional<BankCardListResponse>> change =
+                    invocation.getArgument(1);
+            Optional<BankCardListResponse> next = change.apply(Optional.ofNullable(stored));
+            next.ifPresent(value -> written = value);
+            return next;
+        });
     }
 }
