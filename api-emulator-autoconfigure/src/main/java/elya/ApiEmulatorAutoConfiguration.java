@@ -24,7 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
         matchIfMissing = true
 )
 @EnableConfigurationProperties({
-        ApiTokenConfig.class,
+        ApiTokenProperties.class,
         ApiEmulatorCredentialsStructure.class
 })
 public class ApiEmulatorAutoConfiguration {

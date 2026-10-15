@@ -19,7 +19,7 @@ api:
         password: "qa"
         role: "QA"
     token:
-      expiration: 3600 # token lifetime is 1 Hour
+      expiration: 1h
       issuer: ${TOKEN_ISSUER:api-emulator}
 
 management:

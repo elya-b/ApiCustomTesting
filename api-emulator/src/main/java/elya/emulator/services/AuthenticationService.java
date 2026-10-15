@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import static elya.emulator.constants.logs.ApiErrorLogs.*;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
 import static org.apache.logging.log4j.util.Strings.isBlank;
 
 /**

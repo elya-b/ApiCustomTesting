@@ -8,7 +8,7 @@ import lombok.experimental.UtilityClass;
  * successful business operations without cluttering the business logic with string literals.</p>
  */
 @UtilityClass
-public class ApiInfoLogs {
+public class EmulatorInfoLogs {
 
     /** Logged when a specific card is successfully removed from the emulator's state. */
     public static final String ATTEMPTING_TO_DELETE_CARD_ID_FOR_TOKEN = "Attempting to delete cardId: [{}] for token: [{}]";

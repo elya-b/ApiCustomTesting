@@ -16,5 +16,5 @@ api:
         role: "USER"
 
     token:
-      expiration: 3600
+      expiration: 1h
       issuer: api-emulator

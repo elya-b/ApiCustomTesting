@@ -3,7 +3,6 @@ package elya.emulator.services;
 import elya.ApiEmulatorHttpStatusInfoGenerator;
 import elya.apicontracts.IBankCardApi;
 import elya.apicontracts.IMockControlApi;
-import elya.card.BankCard;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardResponse;
@@ -19,8 +18,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static elya.emulator.constants.logs.ApiInfoLogs.*;
-import static elya.emulator.constants.logs.ApiWarnLogs.*;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
+import static elya.emulator.constants.logs.EmulatorWarnLogs.*;
 
 /**
  * Service for managing bank card mock data and providing it to the emulator.

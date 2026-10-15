@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static elya.constants.ApiEndpoints.*;
-import static elya.emulator.constants.logs.ApiErrorLogs.INVALID_OR_MISSING_CREDENTIALS;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.INVALID_OR_MISSING_CREDENTIALS;
 import static elya.emulator.constants.messages.ResponseMessages.MOCK_CLEARED;
 import static elya.enums.responsemodel.AuthToken.SUCCESS;
 import static org.assertj.core.api.Assertions.assertThat;
