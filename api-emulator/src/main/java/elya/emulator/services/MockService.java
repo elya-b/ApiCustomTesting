@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
 import static elya.emulator.constants.logs.EmulatorWarnLogs.*;
+import static elya.emulator.logging.SensitiveDataMasker.maskToken;
 
 /**
  * Service for managing bank card mock data and providing it to the emulator.
@@ -67,7 +68,7 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
     @Override
     public BankCardListResponse setMockResponse(String token, BankCardListRequest request) {
         tokenManagerService.validateAuthToken(token);
-        log.info(PROCESSING_MOCK_UPDATE_REQUEST, token);
+        log.info(PROCESSING_MOCK_UPDATE_REQUEST, maskToken(token));
 
         if (request == null || request.getCards() == null) {
             BankCardListResponse empty = BankCardListResponse.of(List.of());
@@ -95,7 +96,7 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
      */
     @Override
     public boolean isResponseClear(String token) {
-        log.info(CLEARING_MOCK_RESPONSE_FOR_TOKEN, token);
+        log.info(CLEARING_MOCK_RESPONSE_FOR_TOKEN, maskToken(token));
         return mockRepository.clear(token);
     }
 
@@ -114,7 +115,7 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
     @Override
     public Optional<Long> deleteApiBankCardById(String token, Long cardId) {
         tokenManagerService.validateAuthToken(token);
-        log.info(ATTEMPTING_TO_DELETE_CARD_ID_FOR_TOKEN, cardId, token);
+        log.info(ATTEMPTING_TO_DELETE_CARD_ID_FOR_TOKEN, cardId, maskToken(token));
 
         Optional<BankCardListResponse> written = mockRepository.update(token, current ->
                 current.flatMap(response -> {
@@ -157,7 +158,7 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
      */
     @Override
     public Optional<BankCardResponse> getApiBankCardById(String token, Long cardId) {
-        log.info(SEARCHING_FOR_CARD_ID_FOR_TOKEN, cardId, token);
+        log.info(SEARCHING_FOR_CARD_ID_FOR_TOKEN, cardId, maskToken(token));
         return getApiBankCards(token).getResponse().getCards()
                 .stream()
                 .filter(card -> card.getCardId().equals(cardId))
