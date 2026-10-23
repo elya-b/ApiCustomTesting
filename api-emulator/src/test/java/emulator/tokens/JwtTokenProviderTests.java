@@ -1,35 +1,54 @@
 package emulator.tokens;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import elya.ApiTokenProperties;
 import elya.emulator.tokens.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Base64;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-
 /**
- * Unit tests for {@link elya.emulator.tokens.JwtTokenProvider}.
+ * Unit tests for {@link JwtTokenProvider}.
  * <ul>
  *   <li>{@code generateToken()} — returns a non-null, non-blank token</li>
  *   <li>{@code generateToken()} — JWT structure contains exactly 3 dot-separated parts</li>
  *   <li>{@code generateToken()} — subject claim matches the provided login</li>
  *   <li>{@code generateToken()} — token contains the "iat" (issuedAt) claim</li>
- *   <li>{@code generateToken()} — token contains the "exp" (expiration) claim</li>
- *   <li>{@code generateToken()} — expiration is approximately 1 hour from generation time</li>
+ *   <li>{@code generateToken()} — issuer claim comes from ApiTokenProperties</li>
+ *   <li>{@code generateToken()} — exp - iat equals the configured lifetime (1h and 2h)</li>
  *   <li>{@code generateToken()} — two tokens for the same login generated in different seconds differ</li>
  *   <li>{@code generateToken()} — tokens for different logins differ</li>
- *   <li>{@code generateToken()} — does not throw for an empty login string</li>
- *   <li>{@code generateToken()} — does not throw for a null login</li>
+ *   <li>{@code generateToken()} — does not throw for an empty or null login</li>
  * </ul>
+ * <p>Claims are read by decoding the payload without signature verification:
+ * the signing key is private to the provider instance.</p>
  */
 public class JwtTokenProviderTests {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String ISSUER = "api-emulator";
+    private static final Duration ONE_HOUR = Duration.ofHours(1);
+
     private JwtTokenProvider tokenProvider;
 
     @BeforeEach
     void setUp() {
-        tokenProvider = new JwtTokenProvider();
+        tokenProvider = providerWith(ONE_HOUR);
+    }
+
+    private static JwtTokenProvider providerWith(Duration expiration) {
+        return new JwtTokenProvider(new ApiTokenProperties(expiration, ISSUER));
+    }
+
+    private static JsonNode payload(String token) throws IOException {
+        return MAPPER.readTree(Base64.getUrlDecoder().decode(token.split("\\.")[1]));
     }
 
     @Test
@@ -44,80 +63,48 @@ public class JwtTokenProviderTests {
     @Test
     @DisplayName("generateToken() - Should return a valid JWT structure (3 parts separated by '.')")
     void generateToken_ShouldReturnValidJwtStructure() {
-        String token = tokenProvider.generateToken("user");
-        String[] parts = token.split("\\.");
+        String[] parts = tokenProvider.generateToken("user").split("\\.");
 
-        assertEquals(3, parts.length,
-                "JWT must consist of 3 parts: header.payload.signature");
+        assertEquals(3, parts.length, "JWT must consist of 3 parts: header.payload.signature");
     }
 
     @Test
     @DisplayName("generateToken() - Subject should match the provided login")
-    void generateToken_SubjectShouldMatchLogin() {
+    void generateToken_SubjectShouldMatchLogin() throws IOException {
         String login = "testUser";
-        String token = tokenProvider.generateToken(login);
 
-        // The provider generates a new key each time it's instantiated,
-        // so we parse with the same provider instance's key is not directly accessible.
-        // We verify the claim by decoding the payload part (Base64) without signature verification.
-        String payload = new String(java.util.Base64.getUrlDecoder()
-                .decode(token.split("\\.")[1]));
-
-        assertTrue(payload.contains("\"sub\":\"" + login + "\""),
-                "JWT payload must contain the subject equal to login");
+        assertEquals(login, payload(tokenProvider.generateToken(login)).path("sub").asText());
     }
 
     @Test
     @DisplayName("generateToken() - Token should contain issuedAt (iat) claim")
-    void generateToken_ShouldContainIssuedAtClaim() {
-        String token = tokenProvider.generateToken("user");
-
-        String payload = new String(java.util.Base64.getUrlDecoder()
-                .decode(token.split("\\.")[1]));
-
-        assertTrue(payload.contains("\"iat\""),
+    void generateToken_ShouldContainIssuedAtClaim() throws IOException {
+        assertTrue(payload(tokenProvider.generateToken("user")).has("iat"),
                 "JWT must contain 'iat' (issuedAt) claim");
     }
 
     @Test
-    @DisplayName("generateToken() - Token should contain expiration (exp) claim")
-    void generateToken_ShouldContainExpirationClaim() {
-        String token = tokenProvider.generateToken("user");
-
-        String payload = new String(java.util.Base64.getUrlDecoder()
-                .decode(token.split("\\.")[1]));
-
-        assertTrue(payload.contains("\"exp\""),
-                "JWT must contain 'exp' (expiration) claim");
+    @DisplayName("generateToken() - Issuer claim should come from ApiTokenProperties")
+    void generateToken_IssuerShouldComeFromProperties() throws IOException {
+        assertEquals(ISSUER, payload(tokenProvider.generateToken("user")).path("iss").asText());
     }
 
     @Test
-    @DisplayName("generateToken() - Expiration should be approximately 1 hour from now")
-    void generateToken_ExpirationShouldBeApproximatelyOneHourFromNow() {
-        long before = System.currentTimeMillis();
-        String token = tokenProvider.generateToken("user");
-        long after = System.currentTimeMillis();
+    @DisplayName("generateToken() - exp - iat should equal the default lifetime (1h)")
+    void generateToken_LifetimeShouldBeOneHour() throws IOException {
+        JsonNode claims = payload(tokenProvider.generateToken("user"));
 
-        String payload = new String(java.util.Base64.getUrlDecoder()
-                .decode(token.split("\\.")[1]));
+        assertEquals(ONE_HOUR.toSeconds(), claims.path("exp").asLong() - claims.path("iat").asLong());
+    }
 
-        int expIdx = payload.indexOf("\"exp\":");
-        assertNotEquals(-1, expIdx, "exp claim must be present");
+    @Test
+    @DisplayName("generateToken() - exp - iat should follow the configured lifetime (2h)")
+    void generateToken_LifetimeShouldFollowConfiguration() throws IOException {
+        Duration twoHours = Duration.ofHours(2);
+        JsonNode claims = payload(providerWith(twoHours).generateToken("user"));
 
-        int start = expIdx + 6;
-        int end = payload.indexOf(",", start);
-        if (end == -1) end = payload.indexOf("}", start);
-        long expSeconds = Long.parseLong(payload.substring(start, end).trim());
-        long expMillis = expSeconds * 1000L;
-
-        // jjwt truncates timestamps to whole seconds, so expMillis may be up to 999ms
-        // less than expectedMin (which is based on before millis). We allow 1s tolerance downward.
-        long expectedMin = before + 3600_000L - 1000L;
-        long expectedMax = after  + 3600_000L + 1000L;
-
-        assertTrue(expMillis >= expectedMin && expMillis <= expectedMax,
-                "Expiration must be within 1 hour from token generation time " +
-                        "(got " + expMillis + ", expected [" + expectedMin + ".." + expectedMax + "])");
+        assertEquals(twoHours.toSeconds(), claims.path("exp").asLong() - claims.path("iat").asLong(),
+                "Lifetime must come from configuration, not a hardcoded constant");
     }
 
     @Test
@@ -128,17 +115,13 @@ public class JwtTokenProviderTests {
         Thread.sleep(1100);
         String token2 = tokenProvider.generateToken("user");
 
-        assertNotEquals(token1, token2,
-                "Tokens generated in different seconds must not be equal");
+        assertNotEquals(token1, token2, "Tokens generated in different seconds must not be equal");
     }
 
     @Test
     @DisplayName("generateToken() - Tokens for different logins must differ")
     void generateToken_TokensForDifferentLoginsMustDiffer() {
-        String token1 = tokenProvider.generateToken("alice");
-        String token2 = tokenProvider.generateToken("bob");
-
-        assertNotEquals(token1, token2,
+        assertNotEquals(tokenProvider.generateToken("alice"), tokenProvider.generateToken("bob"),
                 "Tokens for different users must not be equal");
     }
 
@@ -152,8 +135,7 @@ public class JwtTokenProviderTests {
     @Test
     @DisplayName("generateToken() - Should handle null login without throwing")
     void generateToken_ShouldHandleNullLogin() {
-        // JwtTokenProvider does not validate login — it passes it as subject.
-        // Jwts.builder().subject(null) in jjwt produces a token without the sub claim.
+        // jjwt omits the sub claim when the subject is null
         assertDoesNotThrow(() -> tokenProvider.generateToken(null),
                 "Provider must not throw for null login");
     }

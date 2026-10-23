@@ -1,47 +1,33 @@
 package elya.emulator.services;
 
+import elya.ApiTokenProperties;
 import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.objects.TokenRecord;
 import elya.emulator.repository.SessionRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_IS_EXPIRED;
-import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_VALIDATION_FAILED;
 import static elya.emulator.constants.logs.EmulatorInfoLogs.TOKEN_VALIDATION_SERVICE_START;
 import static elya.emulator.constants.logs.EmulatorInfoLogs.TOKEN_VALIDATION_SERVICE_STOP;
+import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_IS_EXPIRED;
+import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_VALIDATION_FAILED;
 
 /**
  * Service for managing the lifecycle of authentication tokens.
- * It handles token generation, session persistence via {@link SessionRepository},
- * and rigorous validation of token expiration and existence.
+ * <p>Persists sessions via {@link SessionRepository} and validates token existence and expiry.
+ * Token lifetime and issuer come from {@link ApiTokenProperties}, the single source of truth
+ * for token settings.</p>
  */
 @Slf4j
-@Getter
-@RequiredArgsConstructor
 @Service
+@RequiredArgsConstructor
 public class TokenManagerService {
 
     private final SessionRepository sessionRepository;
-
-    /**
-     * The duration for which a token remains valid, in seconds.
-     * Configured via {@code token.expiration} in application properties (default is 3600).
-     */
-    @Value("${token.expiration:3600}")
-    private long expirationSeconds;
-
-    /**
-     * The identifier of the entity that issued the token.
-     * Configured via {@code token.issuer}.
-     */
-    @Value("${token.issuer:api-emulator}")
-    private String issuer;
+    private final ApiTokenProperties tokenProperties;
 
     /**
      * Logs the service initialization status.
@@ -60,12 +46,30 @@ public class TokenManagerService {
     }
 
     /**
+     * Returns the configured token lifetime.
+     *
+     * @return the token lifetime in seconds.
+     */
+    public long getExpirationSeconds() {
+        return tokenProperties.expiration().toSeconds();
+    }
+
+    /**
+     * Returns the configured token issuer.
+     *
+     * @return the issuer identifier included in token responses.
+     */
+    public String getIssuer() {
+        return tokenProperties.issuer();
+    }
+
+    /**
      * Validates the provided authentication token against the active sessions.
      * <p>The validation process checks:
      * 1. If the token string is not null or empty.
      * 2. If the token exists in the repository.
      * 3. If the current system time has not exceeded the token's expiry timestamp.</p>
-     * * If the token is expired, it is automatically removed from the repository.
+     * <p>If the token is expired, it is automatically removed from the repository.</p>
      *
      * @param actualToken the raw token string to validate.
      * @throws TokenValidationException if the token is missing, invalid, or expired.
@@ -92,7 +96,7 @@ public class TokenManagerService {
      * @return the expiration timestamp in milliseconds (epoch time).
      */
     public long saveSession(String login, String token) {
-        long expiryMillis = System.currentTimeMillis() + (expirationSeconds * 1000);
+        long expiryMillis = System.currentTimeMillis() + tokenProperties.expiration().toMillis();
         sessionRepository.save(token, new TokenRecord(login, expiryMillis));
         return expiryMillis;
     }
