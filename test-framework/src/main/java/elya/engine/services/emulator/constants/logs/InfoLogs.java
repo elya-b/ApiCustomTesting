@@ -20,4 +20,7 @@ public class InfoLogs {
 
     /** Logged once the emulator is bound. Takes the port number as the single argument. */
     public static final String MANAGER_READY_ON_PORT = "MANAGER: ready on port {}";
+
+    /** Logged after a successful login; names the user, never the token. */
+    public static final String MANAGER_AUTHENTICATED_AS = "MANAGER: authenticated as [{}]";
 }

@@ -18,6 +18,7 @@ import java.util.function.Function;
 import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
 import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
 import static elya.emulator.constants.logs.EmulatorWarnLogs.*;
+import static elya.emulator.logging.SensitiveDataMasker.maskToken;
 
 /**
  * Repository for managing persistent mock responses.
@@ -68,12 +69,12 @@ public class MockRepository {
      */
     public boolean save(String token, BankCardListResponse response) {
         try {
-            log.info(PERSISTING_MOCK_DATA_TO_STORAGE_FOR_TOKEN, token);
+            log.info(PERSISTING_MOCK_DATA_TO_STORAGE_FOR_TOKEN, maskToken(token));
             mockedResponses.put(token, response);
             saveToFile();
             return true;
         } catch (Exception e) {
-            log.error(ERROR_DURING_MOCK_PERSISTENCE_FOR_TOKEN, token, e);
+            log.error(ERROR_DURING_MOCK_PERSISTENCE_FOR_TOKEN, maskToken(token), e);
             return false;
         }
     }

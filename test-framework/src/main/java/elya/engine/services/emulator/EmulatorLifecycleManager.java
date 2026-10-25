@@ -151,7 +151,6 @@ public class EmulatorLifecycleManager {
         try {
             JsonNode body = objectMapper.valueToTree(authRequest);
             JsonNode responseNode = restClient.post(this.url + URL_TOKEN, body, Map.of());
-            log.info("performLogin response: {}", responseNode);
             response = objectMapper.treeToValue(responseNode, AuthResponse.class);
         } catch (Exception e) {
             log.error("Authentication failed: {}", e.getMessage());
@@ -159,6 +158,7 @@ public class EmulatorLifecycleManager {
         }
 
         if (response != null && response.getSuccess() && response.getData() != null) {
+            log.info(MANAGER_AUTHENTICATED_AS, authRequest.getLogin());
             return response.getData().getToken();
         } else {
             throw new IllegalStateException(FAILED_TO_GENERATE_AUTH_TOKEN);

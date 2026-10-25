@@ -40,7 +40,6 @@ import static org.mockito.Mockito.*;
  * </ul>
  */
 @ExtendWith(MockitoExtension.class)
-
 public class AuthenticationServiceTests {
     @Mock
     private TokenManagerService tokenManagerService;
