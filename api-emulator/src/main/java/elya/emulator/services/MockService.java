@@ -90,12 +90,14 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
     }
 
     /**
-     * Removes the entire custom mock response associated with the token.
-     * * @param token unique session identifier
-     * @return      true if the record was found and successfully cleared from storage
+     * Removes the entire mock response stored for the session.
+     *
+     * @param token the session token.
+     * @return {@code true} if a mock response existed and was removed,
+     *         {@code false} if there was nothing to clear.
      */
     @Override
-    public boolean isResponseClear(String token) {
+    public boolean clearMockResponse(String token) {
         log.info(CLEARING_MOCK_RESPONSE_FOR_TOKEN, maskToken(token));
         return mockRepository.clear(token);
     }

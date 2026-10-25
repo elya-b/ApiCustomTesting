@@ -73,7 +73,7 @@ public class MockClient implements IMockControlApi {
      * @throws ApiHttpStatusException if the server rejected the request.
      */
     @Override
-    public boolean isResponseClear(String token) {
+    public boolean clearMockResponse(String token) {
         clientApi.delete(URL_BANK_CARD_DATA, createHeaders(token));
         log.info("Mock response state cleared successfully.");
         return true;

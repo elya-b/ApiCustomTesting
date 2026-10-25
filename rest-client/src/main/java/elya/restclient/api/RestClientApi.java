@@ -83,10 +83,13 @@ public class RestClientApi {
     }
 
     /**
-     * Fully resets the mock data for the current session.
+     * Removes all mocked bank card data for the session.
+     *
+     * @param token the session token.
+     * @return always {@code true}; a rejected request surfaces as an exception.
      */
-    public boolean isResponseClear(String token) {
-        return mockClient.isResponseClear(token);
+    public boolean clearMockResponse(String token) {
+        return mockClient.clearMockResponse(token);
     }
 
     /**
