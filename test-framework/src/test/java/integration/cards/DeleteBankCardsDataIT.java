@@ -34,7 +34,7 @@ public class DeleteBankCardsDataIT extends AbstractApiTest {
                 BankCard.builder(5555666677778888L, CardType.CREDIT, Currency.EUR).build()
         ));
 
-        boolean isCleared = clientApi.isResponseClear(token);
+        boolean isCleared = clientApi.clearMockResponse(token);
         List<BankCard> remainingCards = clientApi.getApiBankCards(token);
         attachJson("Remaining cards after clear", remainingCards);
 
@@ -54,8 +54,8 @@ public class DeleteBankCardsDataIT extends AbstractApiTest {
     void clearMockResponse_ShouldReturnTrue_WhenNoCardsArePresent() {
         String token = emulator.getAuthToken();
 
-        clientApi.isResponseClear(token);
-        boolean isCleared = clientApi.isResponseClear(token);
+        clientApi.clearMockResponse(token);
+        boolean isCleared = clientApi.clearMockResponse(token);
 
         List<BankCard> result = clientApi.getApiBankCards(token);
         attachJson("Response after 2nd clear", result);
@@ -78,7 +78,7 @@ public class DeleteBankCardsDataIT extends AbstractApiTest {
         emulator.addBankCards(token, List.of(
                 BankCard.builder(1111222233334444L, CardType.DEBIT, Currency.USD).build()
         ));
-        clientApi.isResponseClear(token);
+        clientApi.clearMockResponse(token);
 
         List<BankCard> result = clientApi.getApiBankCards(token);
         attachJson("Response after clear", result);
@@ -97,7 +97,7 @@ public class DeleteBankCardsDataIT extends AbstractApiTest {
         emulator.addBankCards(token, List.of(
                 BankCard.builder(1111222233334444L, CardType.DEBIT, Currency.USD).build()
         ));
-        clientApi.isResponseClear(token);
+        clientApi.clearMockResponse(token);
 
         var newCard = BankCard.builder(5555666677778888L, CardType.CREDIT, Currency.EUR).build();
         attachJson("New card request", newCard);

@@ -12,6 +12,6 @@ import java.util.Optional;
 public interface IMockControlApi {
 
     BankCardListResponse setMockResponse(String token, BankCardListRequest request);
-    boolean isResponseClear(String token);
+    boolean clearMockResponse(String token);
     Optional<Long> deleteApiBankCardById(String token, Long cardId);
 }

@@ -115,7 +115,7 @@ public class MockClientTests {
     @Test
     @DisplayName("clearMockResponse() - Should return true when the server accepts the request")
     void clearMockResponse_ShouldReturnTrue() {
-        var result = mockClient.isResponseClear(TOKEN);
+        var result = mockClient.clearMockResponse(TOKEN);
 
         assertTrue(result);
         verify(clientApi).delete(eq(URL_BANK_CARD_DATA), anyMap());
@@ -128,7 +128,7 @@ public class MockClientTests {
                 .when(clientApi).delete(anyString(), anyMap());
 
         var exception = assertThrows(ApiHttpStatusException.class,
-                () -> mockClient.isResponseClear(TOKEN));
+                () -> mockClient.clearMockResponse(TOKEN));
 
         assertEquals(401, exception.getStatusCode(), "The 401 must not be swallowed into false");
     }
