@@ -20,10 +20,10 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static elya.constants.enums.HttpHeaderValues.*;
+import static elya.constants.enums.HttpHeaderValues.APPLICATION_JSON;
 import static elya.restclient.constants.logs.ErrorLogs.*;
-import static elya.restclient.constants.messages.ExceptionMessages.*;
-import static org.springframework.http.HttpHeaders.*;
+import static elya.restclient.constants.messages.ExceptionMessages.NO_HTTP_STATUS_EXCEPTION;
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 
 /**
  * Core engine for executing HTTP requests using Java's native {@link HttpClient}.

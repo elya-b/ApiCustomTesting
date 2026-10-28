@@ -11,7 +11,7 @@ import io.qameta.allure.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static elya.constants.ApiEndpoints.*;
+import static elya.constants.ApiEndpoints.URL_TOKEN;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

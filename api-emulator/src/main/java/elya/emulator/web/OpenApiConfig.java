@@ -32,6 +32,7 @@ public class OpenApiConfig {
                                 .name(HttpHeaders.AUTHORIZATION)
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
-                                .bearerFormat("JWT")));
+                                .bearerFormat("JWT")
+                                .description("Paste the token from POST /auth/token without the 'Bearer ' prefix")));
     }
 }

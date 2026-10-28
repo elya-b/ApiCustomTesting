@@ -17,7 +17,7 @@ import java.util.function.Function;
 
 import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
 import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
-import static elya.emulator.constants.logs.EmulatorWarnLogs.*;
+import static elya.emulator.constants.logs.EmulatorWarnLogs.FAILED_DELETE_STORAGE_FILE;
 import static elya.emulator.logging.SensitiveDataMasker.maskToken;
 
 /**

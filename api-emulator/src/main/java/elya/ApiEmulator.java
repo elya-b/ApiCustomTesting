@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.Collections;
 
-import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.EMULATOR_STARTED_ON_PORT_SUCCESSFULLY;
 
 /**
  * Main entry point for the Bank API Emulator application.

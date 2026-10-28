@@ -2,7 +2,6 @@ package elya.constants.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.ToString;
 
 /**
  * Enumeration of standardized JSON property names used in API request and response payloads.

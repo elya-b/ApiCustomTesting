@@ -2,7 +2,6 @@ package elya.constants.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.ToString;
 
 /**
  * Enumeration of standardized keys used to extract and map status-related metadata from API responses.

@@ -15,9 +15,13 @@ import elya.emulator.services.MockService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static elya.constants.enums.HttpHeaderValues.BEARER;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +54,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
  *   <li>{@code clear()} — removes all mocks for the specific user</li>
  *   <li>{@code clear()} — does not affect other users' data (isolation)</li>
  *   <li>{@code setMockResponse()} — returns 400 and does not save data for an invalid card number</li>
- *   <li>{@code intercept()} — returns 401 for an invalid token</li>
+ *   <li>{@code intercept()} — returns 401 for an invalid token on every protected endpoint (parameterized)</li>
  *   <li>{@code mapping()} — correctly maps Currency and CardType enum fields from JSON</li>
  *   <li>{@code concurrency()} — safely handles concurrent requests from multiple threads</li>
  *   <li>{@code getById()} — returns 404 when a card ID does not exist</li>
@@ -57,6 +62,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
  *   <li>{@code init()} — gracefully handles a corrupted JSON file</li>
  *   <li>{@code setMockResponse()} — handles a large payload (100+ cards in one request)</li>
  *   <li>{@code intercept()} — returns 401 when session is invalidated (SessionRepository)</li>
+ *   <li>{@code clearMockResponse()} — returns 401 and keeps the mocks of an expired session (regression)</li>
  * </ul>
  */
 @SpringBootTest(classes = elya.ApiEmulator.class) // Starts the full Spring application context for the test
@@ -83,6 +89,7 @@ public class ApiEmulatorIntegrationTests {
     private static final Long CARD_NUMBER = 4444555566667777L;
     private static final Long CARD_NUMBER_2 = 5555666677778888L;
     private static final Long CARD_NUMBER_15 = 444455556666777L;
+    private static final String INVALID_TOKEN = "invalid_token";
     private static final AuthRequest LOGIN_REQUEST = new AuthRequest("admin_user", "admin_password");
     private static final AuthRequest LOGIN_REQUEST_TEST = new AuthRequest("test_user", "test_password");
 
@@ -177,14 +184,30 @@ public class ApiEmulatorIntegrationTests {
         assertThat(mock).as("Mock should not be created for invalid data").isNotPresent();
     }
 
-    @Test
-    @DisplayName("intercept() - Should return 401 when token is invalid")
-    void intercept_ShouldReturn401_WhenTokenIsInvalid() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get(ApiEndpoints.URL_BANK_CARD_DATA)
-                        .header(AUTHORIZATION, BEARER + "invalid_token"))
-                .andExpect(
-                        MockMvcResultMatchers.status().isUnauthorized()
-                );
+    /**
+     * Every endpoint behind {@code SessionTokenInterceptor}: one row per HTTP method and path.
+     * <p>A new protected endpoint must get a row here, so the test keeps proving the interceptor covers it.</p>
+     */
+    static Stream<Arguments> protectedEndpoints() {
+        String byId = ApiEndpoints.URL_BANK_CARD_DATA + "/" + CARD_ID;
+        return Stream.of(
+                Arguments.of(HttpMethod.GET, ApiEndpoints.URL_BANK_CARD_DATA),
+                Arguments.of(HttpMethod.GET, byId),
+                Arguments.of(HttpMethod.POST, ApiEndpoints.URL_BANK_CARD_DATA),
+                Arguments.of(HttpMethod.DELETE, ApiEndpoints.URL_BANK_CARD_DATA),
+                Arguments.of(HttpMethod.DELETE, byId)
+        );
+    }
+
+    @ParameterizedTest(name = "[{index}] {0} {1}")
+    @MethodSource("protectedEndpoints")
+    @DisplayName("intercept() - Should return 401 for an invalid token on every protected endpoint")
+    void intercept_ShouldReturn401_WhenTokenIsInvalid(HttpMethod method, String path) throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.request(method, path)
+                        .header(AUTHORIZATION, BEARER + INVALID_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest(CARD_NUMBER, Currency.EUR))))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
     }
 
     @Test
@@ -292,6 +315,23 @@ public class ApiEmulatorIntegrationTests {
         mockMvc.perform(MockMvcRequestBuilders.get(ApiEndpoints.URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, BEARER + token))
                 .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("clearMockResponse() - Should return 401 and keep the mocks when the session is no longer valid")
+    void clear_ShouldReturn401AndKeepMocks_WhenSessionIsExpired() throws Exception {
+        String token = loginAndGetToken(LOGIN_REQUEST);
+        setMockResponse(token, createRequest(CARD_NUMBER, Currency.EUR), true);
+
+        sessionRepository.clear();
+
+        mockMvc.perform(MockMvcRequestBuilders.delete(ApiEndpoints.URL_BANK_CARD_DATA)
+                        .header(AUTHORIZATION, BEARER + token))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+
+        assertThat(mockRepository.find(token))
+                .as("Mocks of an expired session must not be deleted")
+                .isPresent();
     }
 
     private BankCardListRequest createRequest(Long number, Currency currency) {
