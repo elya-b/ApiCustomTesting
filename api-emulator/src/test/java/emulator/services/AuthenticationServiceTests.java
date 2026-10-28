@@ -156,8 +156,10 @@ public class AuthenticationServiceTests {
         return Stream.of(
                 new AuthRequest(null, PASSWORD),
                 new AuthRequest("", PASSWORD),
+                new AuthRequest("   ", PASSWORD),
                 new AuthRequest(LOGIN, null),
-                new AuthRequest(LOGIN, "")
+                new AuthRequest(LOGIN, ""),
+                new AuthRequest(LOGIN, "   ")
         );
     }
 

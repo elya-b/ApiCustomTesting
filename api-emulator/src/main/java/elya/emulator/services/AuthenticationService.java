@@ -11,9 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.INVALID_OR_MISSING_CREDENTIALS;
-import static org.apache.logging.log4j.util.Strings.isBlank;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
 
 /**
  * Service responsible for user authentication and session token issuance.
@@ -31,7 +31,7 @@ public class AuthenticationService implements IAuthApi, DataTransformer {
 
     /**
      * Authenticates a user based on the provided credentials and returns a secure session token.
-     * * <p>The process involves:
+     * <p>The process involves:
      * 1. Validating that login and password are not blank.
      * 2. Verifying the credentials against the pre-configured user list.
      * 3. Generating a unique token with specific TTL and expiration metadata.</p>
@@ -42,7 +42,8 @@ public class AuthenticationService implements IAuthApi, DataTransformer {
      */
     @Override
     public AuthResponse generateAuthToken(AuthRequest request) {
-        if (request == null || isBlank(request.getLogin()) || isBlank(request.getPassword())) {
+        if (request == null ||
+                !StringUtils.hasText(request.getLogin()) || !StringUtils.hasText(request.getPassword())) {
             log.error(INVALID_OR_MISSING_CREDENTIALS);
             throw new TokenValidationException(INVALID_OR_MISSING_CREDENTIALS);
         }
