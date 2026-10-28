@@ -2,7 +2,6 @@ package elya.emulator.web;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import elya.dto.auth.AuthResponse;
 import elya.emulator.exceptions.ApiEmulatorException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -25,21 +24,16 @@ import java.util.Optional;
 
 import static elya.emulator.constants.logs.EmulatorErrorLogs.REQUEST_FAILED;
 import static elya.emulator.constants.logs.EmulatorWarnLogs.REQUEST_REJECTED;
-import static elya.emulator.constants.messages.ExceptionMessages.INVALID_FIELD_VALUE;
-import static elya.emulator.constants.messages.ExceptionMessages.MALFORMED_REQUEST_BODY;
-import static elya.emulator.constants.messages.ExceptionMessages.REQUEST_BODY_MISSING;
-import static elya.emulator.constants.messages.ExceptionMessages.RESOURCE_NOT_FOUND;
-import static elya.emulator.constants.messages.ExceptionMessages.UNEXPECTED_INTERNAL_ERROR;
-import static elya.emulator.constants.messages.ExceptionMessages.VALIDATION_FAILED;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
 
 /**
  * Centralized exception handling for the API Emulator.
  * <p>Extends {@link ResponseEntityExceptionHandler}, so Spring MVC exceptions (unknown path,
  * unsupported method or media type, type mismatch, unreadable body) keep their HTTP status
  * and headers instead of falling into the catch-all {@code 500}.</p>
- * <p>Every handler builds a {@link ProblemDetail} and passes it to {@link #handleExceptionInternal},
- * which logs the failure by status; {@link #createResponseEntity} then renders the detail
- * as the {@link AuthResponse} error envelope.</p>
+ * <p>Every error is returned as an RFC 9457 {@link ProblemDetail}: each handler builds the detail
+ * and passes it to {@link #handleExceptionInternal}, which logs the failure by status.
+ * Spring fills {@code title} from the status and {@code instance} from the request path.</p>
  */
 @Slf4j
 @RestControllerAdvice
@@ -156,23 +150,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * Renders the {@link ProblemDetail} built by the handlers as the {@link AuthResponse} error envelope,
-     * keeping the status and the headers (e.g. {@code Allow}, {@code WWW-Authenticate}).
-     */
-    @NonNull
-    @Override
-    protected ResponseEntity<Object> createResponseEntity(@Nullable Object body,
-                                                          @NonNull HttpHeaders headers,
-                                                          @NonNull HttpStatusCode statusCode,
-                                                          @NonNull WebRequest request) {
-        AuthResponse errorBody = AuthResponse.builder()
-                .success(false)
-                .message(detailOf(body).orElseGet(statusCode::toString))
-                .build();
-        return new ResponseEntity<>(errorBody, headers, statusCode);
-    }
-
-    /**
      * Builds a client-facing field path from the Jackson reference chain, e.g. {@code cards[0].cardType}.
      *
      * @param ex the Jackson exception carrying the path to the rejected field
@@ -194,7 +171,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * Extracts the client-facing detail from a response body built by the handlers.
+     * Extracts the client-facing detail from a handler-built body, so the log shows
+     * exactly what the client receives.
      *
      * @param body the response body, usually a {@link ProblemDetail}
      * @return the detail, or empty if the body carries none
