@@ -27,4 +27,7 @@ public class EmulatorErrorLogs {
 
     /** Log message for unauthorized access or missing credentials. */
     public static final String INVALID_OR_MISSING_CREDENTIALS = "Invalid or missing credentials.";
+
+    /** Logged with the stack trace when a request fails with a 5xx status: status code, request description. */
+    public static final String REQUEST_FAILED = "Request failed with status [{}] ({})";
 }

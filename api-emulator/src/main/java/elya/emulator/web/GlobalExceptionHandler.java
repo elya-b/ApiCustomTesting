@@ -1,121 +1,207 @@
 package elya.emulator.web;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import elya.dto.auth.AuthResponse;
 import elya.emulator.exceptions.ApiEmulatorException;
-import elya.emulator.exceptions.TokenValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Optional;
 
+import static elya.emulator.constants.logs.EmulatorErrorLogs.REQUEST_FAILED;
+import static elya.emulator.constants.logs.EmulatorWarnLogs.REQUEST_REJECTED;
+import static elya.emulator.constants.messages.ExceptionMessages.INVALID_FIELD_VALUE;
+import static elya.emulator.constants.messages.ExceptionMessages.MALFORMED_REQUEST_BODY;
+import static elya.emulator.constants.messages.ExceptionMessages.REQUEST_BODY_MISSING;
+import static elya.emulator.constants.messages.ExceptionMessages.RESOURCE_NOT_FOUND;
+import static elya.emulator.constants.messages.ExceptionMessages.UNEXPECTED_INTERNAL_ERROR;
+import static elya.emulator.constants.messages.ExceptionMessages.VALIDATION_FAILED;
+
 /**
- * Global interceptor for centralized exception handling across the API Emulator.
- * <p>Uses {@link RestControllerAdvice} to intercept exceptions thrown by controllers
- * and normalize them into a consistent {@link AuthResponse} format. This ensures
- * that the client always receives a structured JSON response instead of a stack trace.</p>
+ * Centralized exception handling for the API Emulator.
+ * <p>Extends {@link ResponseEntityExceptionHandler}, so Spring MVC exceptions (unknown path,
+ * unsupported method or media type, type mismatch, unreadable body) keep their HTTP status
+ * and headers instead of falling into the catch-all {@code 500}.</p>
+ * <p>Every handler builds a {@link ProblemDetail} and passes it to {@link #handleExceptionInternal},
+ * which logs the failure by status; {@link #createResponseEntity} then renders the detail
+ * as the {@link AuthResponse} error envelope.</p>
  */
 @Slf4j
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    /** Authentication challenge sent with every {@code 401} response (RFC 6750, section 3). */
+    private static final String BEARER_CHALLENGE = "Bearer";
 
     /**
-     * Handles authentication failures specifically related to token validation.
+     * Handles emulator exceptions with the HTTP status they carry.
+     * <p>Adds the {@code WWW-Authenticate} challenge to {@code 401 Unauthorized} responses.</p>
      *
-     * @param ex the caught {@link TokenValidationException}.
-     * @return a {@link ResponseEntity} with {@code 401 Unauthorized} and error details.
+     * @param ex      the caught {@link ApiEmulatorException}
+     * @param request the current request
+     * @return the error response with the status from {@code ex}
      */
-    @ExceptionHandler(TokenValidationException.class)
-    public ResponseEntity<AuthResponse> handleTokenValidation(TokenValidationException ex) {
-        log.error("Unexpected error: ", ex);
-        return buildErrorResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED);
-    }
-
-    /**
-     * Handles custom business logic exceptions derived from {@link ApiEmulatorException}.
-     *
-     * @param ex the caught exception containing a pre-defined HTTP status.
-     * @return a {@link ResponseEntity} with the specific status and error message.
-     */
+    @Nullable
     @ExceptionHandler(ApiEmulatorException.class)
-    public ResponseEntity<AuthResponse> handleApiError(ApiEmulatorException ex) {
-        log.error("Unexpected error: ", ex);
-        return buildErrorResponse(ex.getMessage(), ex.getStatus());
+    public ResponseEntity<Object> handleApiEmulatorException(ApiEmulatorException ex, WebRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        if (ex.getStatus() == HttpStatus.UNAUTHORIZED) {
+            headers.set(HttpHeaders.WWW_AUTHENTICATE, BEARER_CHALLENGE);
+        }
+        ProblemDetail body = ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
+        return handleExceptionInternal(ex, body, headers, ex.getStatus(), request);
     }
 
     /**
-     * Handles JSR-303 validation errors (e.g., {@code @NotNull}, {@code @Range}).
-     * <p>Extracts the first available validation message to provide specific
-     * feedback to the client regarding invalid request fields.</p>
+     * Catch-all for exceptions that no other handler covers.
+     * <p>Returns a generic message, so internal details never reach the client.</p>
      *
-     * @param ex the exception containing validation results.
-     * @return a {@link ResponseEntity} with {@code 400 Bad Request}.
+     * @param ex      the unexpected exception
+     * @param request the current request
+     * @return the error response with {@code 500 Internal Server Error}
      */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<AuthResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String errorMessage = Optional.ofNullable(ex.getBindingResult().getFieldError())
-                .map(DefaultMessageSourceResolvable::getDefaultMessage)
-                .orElse("Validation failed");
-
-        return buildErrorResponse(errorMessage, HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * Handles malformed or missing JSON request bodies.
-     *
-     * @param ex the exception thrown when the body is unreadable.
-     * @return a {@link ResponseEntity} with {@code 400 Bad Request}.
-     */
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<AuthResponse> handleMissingBody(HttpMessageNotReadableException ex) {
-        log.error("Unexpected error: ", ex);
-        return buildErrorResponse("Required request body is missing", HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * Handles missing mandatory request headers (e.g., missing Authorization header).
-     *
-     * @param ex the exception thrown when a required binding is missing.
-     * @return a {@link ResponseEntity} with {@code 400 Bad Request}.
-     */
-    @ExceptionHandler(ServletRequestBindingException.class)
-    public ResponseEntity<AuthResponse> handleMissingHeader(ServletRequestBindingException ex) {
-        log.error("Unexpected error: ", ex);
-        return buildErrorResponse("Required request header is missing", HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * Catch-all handler for any unhandled internal server errors.
-     * <p>Prevents sensitive technical details and stack traces from leaking to the client.</p>
-     *
-     * @param ex the unexpected exception.
-     * @return a {@link ResponseEntity} with {@code 500 Internal Server Error}.
-     */
+    @Nullable
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<AuthResponse> handleGeneralException(Exception ex) {
-        log.error("Unexpected error: ", ex);
-        return buildErrorResponse("An unexpected internal error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<Object> handleUnexpectedException(Exception ex, WebRequest request) {
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        ProblemDetail body = ProblemDetail.forStatusAndDetail(status, UNEXPECTED_INTERNAL_ERROR);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), status, request);
     }
 
     /**
-     * Helper method to wrap error messages into a consistent {@link AuthResponse} envelope.
-     *
-     * @param message the error message to display.
-     * @param status  the {@link HttpStatus} code for the response.
-     * @return a {@link ResponseEntity} containing the standardized error body.
+     * Reports the first field validation message (e.g. {@code @NotNull}, {@code @Range}).
+     * <p>The exception message is not used: it contains the rejected value, which may be a card number.</p>
      */
-    private ResponseEntity<AuthResponse> buildErrorResponse(String message, HttpStatus status) {
-        AuthResponse response = AuthResponse.builder()
-                .success(false)
-                .message(message)
-                .build();
+    @Nullable
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(@NonNull MethodArgumentNotValidException ex,
+                                                                  @NonNull HttpHeaders headers,
+                                                                  @NonNull HttpStatusCode status,
+                                                                  @NonNull WebRequest request) {
+        String detail = Optional.ofNullable(ex.getBindingResult().getFieldError())
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .orElse(VALIDATION_FAILED);
+        return handleExceptionInternal(ex, ProblemDetail.forStatusAndDetail(status, detail), headers, status, request);
+    }
 
-        return new ResponseEntity<>(response, status);
+    /**
+     * Reports why the request body could not be read: it is missing, a field has a value
+     * of the wrong type, or the JSON is malformed.
+     * <p>The rejected value is never echoed back, as it may be a card number.</p>
+     */
+    @Nullable
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(@NonNull HttpMessageNotReadableException ex,
+                                                                  @NonNull HttpHeaders headers,
+                                                                  @NonNull HttpStatusCode status,
+                                                                  @NonNull WebRequest request) {
+        String detail = switch (ex.getCause()) {
+            case null -> REQUEST_BODY_MISSING;
+            case MismatchedInputException mismatch when !mismatch.getPath().isEmpty() ->
+                    INVALID_FIELD_VALUE.formatted(fieldPath(mismatch));
+            default -> MALFORMED_REQUEST_BODY;
+        };
+        return handleExceptionInternal(ex, ProblemDetail.forStatusAndDetail(status, detail), headers, status, request);
+    }
+
+    /**
+     * Reports an unknown path with an API-oriented message.
+     * <p>Replaces Spring's default detail ("No static resource ..."), which describes
+     * static file serving rather than a REST endpoint.</p>
+     */
+    @Nullable
+    @Override
+    protected ResponseEntity<Object> handleNoResourceFoundException(@NonNull NoResourceFoundException ex,
+                                                                    @NonNull HttpHeaders headers,
+                                                                    @NonNull HttpStatusCode status,
+                                                                    @NonNull WebRequest request) {
+        return handleExceptionInternal(ex, ProblemDetail.forStatusAndDetail(status, RESOURCE_NOT_FOUND),
+                headers, status, request);
+    }
+
+    /**
+     * Logs every handled failure before the response is built.
+     * <p>{@code 5xx} is logged as ERROR with the stack trace. {@code 4xx} is an expected
+     * client error and is logged as WARN with the client-facing detail only.</p>
+     */
+    @Nullable
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(@NonNull Exception ex,
+                                                             @Nullable Object body,
+                                                             @NonNull HttpHeaders headers,
+                                                             @NonNull HttpStatusCode statusCode,
+                                                             @NonNull WebRequest request) {
+        String requestDescription = request.getDescription(false);
+        if (statusCode.is5xxServerError()) {
+            log.error(REQUEST_FAILED, statusCode.value(), requestDescription, ex);
+        } else {
+            log.warn(REQUEST_REJECTED, statusCode.value(), requestDescription, detailOf(body).orElseGet(ex::getMessage));
+        }
+        return super.handleExceptionInternal(ex, body, headers, statusCode, request);
+    }
+
+    /**
+     * Renders the {@link ProblemDetail} built by the handlers as the {@link AuthResponse} error envelope,
+     * keeping the status and the headers (e.g. {@code Allow}, {@code WWW-Authenticate}).
+     */
+    @NonNull
+    @Override
+    protected ResponseEntity<Object> createResponseEntity(@Nullable Object body,
+                                                          @NonNull HttpHeaders headers,
+                                                          @NonNull HttpStatusCode statusCode,
+                                                          @NonNull WebRequest request) {
+        AuthResponse errorBody = AuthResponse.builder()
+                .success(false)
+                .message(detailOf(body).orElseGet(statusCode::toString))
+                .build();
+        return new ResponseEntity<>(errorBody, headers, statusCode);
+    }
+
+    /**
+     * Builds a client-facing field path from the Jackson reference chain, e.g. {@code cards[0].cardType}.
+     *
+     * @param ex the Jackson exception carrying the path to the rejected field
+     * @return the dotted field path with list indexes in brackets
+     */
+    private static String fieldPath(MismatchedInputException ex) {
+        StringBuilder path = new StringBuilder();
+        for (JsonMappingException.Reference reference : ex.getPath()) {
+            if (reference.getFieldName() == null) {
+                path.append('[').append(reference.getIndex()).append(']');
+            } else {
+                if (!path.isEmpty()) {
+                    path.append('.');
+                }
+                path.append(reference.getFieldName());
+            }
+        }
+        return path.toString();
+    }
+
+    /**
+     * Extracts the client-facing detail from a response body built by the handlers.
+     *
+     * @param body the response body, usually a {@link ProblemDetail}
+     * @return the detail, or empty if the body carries none
+     */
+    private static Optional<String> detailOf(@Nullable Object body) {
+        return body instanceof ProblemDetail problem
+                ? Optional.ofNullable(problem.getDetail())
+                : Optional.empty();
     }
 }
