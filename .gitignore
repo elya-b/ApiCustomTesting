@@ -42,3 +42,10 @@ build/
 ### Allure ###
 allure-results/
 allure-report/
+
+### Emulator runtime storage (contains live session tokens) ###
+session.json
+mock_response.json
+
+### IntelliJ build output ###
+out/
