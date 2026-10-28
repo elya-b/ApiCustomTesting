@@ -13,13 +13,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.stream.Stream;
 
-import static elya.constants.ApiEndpoints.*;
+import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
 import static elya.emulator.constants.messages.ExceptionMessages.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -27,19 +28,17 @@ import static org.junit.jupiter.api.Named.named;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpHeaders.*;
-import static org.springframework.http.MediaType.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.TEXT_PLAIN;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Unit tests (WebMvcTest) for {@link elya.emulator.web.GlobalExceptionHandler}.
+ * <p>Every error body is an RFC 9457 problem detail ({@code type}, {@code title},
+ * {@code status}, {@code detail}, {@code instance}).</p>
  * <ul>
- *   <li>Unknown path — 404 instead of 500</li>
+ *   <li>Unknown path — 404 with the full problem detail contract</li>
  *   <li>Unsupported HTTP method — 405 with the {@code Allow} header</li>
  *   <li>Unsupported Content-Type — 415</li>
  *   <li>Path variable of the wrong type — 400</li>
@@ -84,9 +83,13 @@ public class GlobalExceptionHandlerTests {
     private static final String CARD_JSON_TEMPLATE = """
             {"cards":[{"cardNumber":%s,"cardType":%s,"currency":"EUR"}]}""";
 
-    // Expected response
-    private static final String SUCCESS_FIELD = "$.Success";
-    private static final String MESSAGE_FIELD = "$.Message";
+    // Expected response (RFC 9457 problem detail)
+    private static final String TYPE_FIELD = "$.type";
+    private static final String TITLE_FIELD = "$.title";
+    private static final String STATUS_FIELD = "$.status";
+    private static final String DETAIL_FIELD = "$.detail";
+    private static final String INSTANCE_FIELD = "$.instance";
+    private static final String BLANK_PROBLEM_TYPE = "about:blank";
     private static final String BEARER_CHALLENGE = "Bearer";
     private static final String CARD_TYPE_PATH = "cards[0].cardType";
     private static final String CARD_NUMBER_PATH = "cards[0].cardNumber";
@@ -94,12 +97,15 @@ public class GlobalExceptionHandlerTests {
     private static final String INTERNAL_DETAIL = "connection pool exhausted";
 
     @Test
-    @DisplayName("GET unknown path - Should return 404 instead of 500")
-    void unknownPath_ShouldReturn404_WhenNoHandlerMatches() throws Exception {
+    @DisplayName("GET unknown path - Should return 404 as an RFC 9457 problem detail")
+    void unknownPath_ShouldReturn404ProblemDetail_WhenNoHandlerMatches() throws Exception {
         mockMvc.perform(get(UNKNOWN_PATH))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath(SUCCESS_FIELD).value(false))
-                .andExpect(jsonPath(MESSAGE_FIELD).value(RESOURCE_NOT_FOUND));
+                .andExpect(jsonPath(TYPE_FIELD).value(BLANK_PROBLEM_TYPE))
+                .andExpect(jsonPath(TITLE_FIELD).value(HttpStatus.NOT_FOUND.getReasonPhrase()))
+                .andExpect(jsonPath(STATUS_FIELD).value(HttpStatus.NOT_FOUND.value()))
+                .andExpect(jsonPath(DETAIL_FIELD).value(RESOURCE_NOT_FOUND))
+                .andExpect(jsonPath(INSTANCE_FIELD).value(UNKNOWN_PATH));
     }
 
     @Test
@@ -108,7 +114,7 @@ public class GlobalExceptionHandlerTests {
         mockMvc.perform(put(URL_BANK_CARD_DATA))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(header().string(ALLOW, containsString(HttpMethod.GET.name())))
-                .andExpect(jsonPath(SUCCESS_FIELD).value(false));
+                .andExpect(jsonPath(STATUS_FIELD).value(HttpStatus.METHOD_NOT_ALLOWED.value()));
     }
 
     @Test
@@ -119,7 +125,7 @@ public class GlobalExceptionHandlerTests {
                         .contentType(TEXT_PLAIN)
                         .content(PLAIN_TEXT_BODY))
                 .andExpect(status().isUnsupportedMediaType())
-                .andExpect(jsonPath(SUCCESS_FIELD).value(false));
+                .andExpect(jsonPath(STATUS_FIELD).value(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value()));
 
         verifyNoInteractions(mockService);
     }
@@ -130,7 +136,7 @@ public class GlobalExceptionHandlerTests {
         mockMvc.perform(get(URL_BANK_CARD_DATA + "/" + NOT_A_NUMBER)
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath(SUCCESS_FIELD).value(false));
+                .andExpect(jsonPath(STATUS_FIELD).value(HttpStatus.BAD_REQUEST.value()));
 
         verifyNoInteractions(mockService);
     }
@@ -138,14 +144,14 @@ public class GlobalExceptionHandlerTests {
     @ParameterizedTest(name = "[{index}] {0}")
     @MethodSource("unreadableBodies")
     @DisplayName("POST " + URL_BANK_CARD_DATA + " - Should return 400 with the reason the body is unreadable")
-    void unreadableBody_ShouldReturn400WithReason(String body, String expectedMessage) throws Exception {
+    void unreadableBody_ShouldReturn400WithReason(String body, String expectedDetail) throws Exception {
         mockMvc.perform(post(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN)
                         .contentType(APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath(SUCCESS_FIELD).value(false))
-                .andExpect(jsonPath(MESSAGE_FIELD).value(expectedMessage));
+                .andExpect(jsonPath(STATUS_FIELD).value(HttpStatus.BAD_REQUEST.value()))
+                .andExpect(jsonPath(DETAIL_FIELD).value(expectedDetail));
 
         verifyNoInteractions(mockService);
     }
@@ -158,7 +164,7 @@ public class GlobalExceptionHandlerTests {
                         .contentType(APPLICATION_JSON)
                         .content(cardJson(SHORT_CARD_NUMBER, CARD_TYPE_JSON_VALUE)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath(MESSAGE_FIELD).value(CARD_NUMBER_LENGTH_MESSAGE));
+                .andExpect(jsonPath(DETAIL_FIELD).value(CARD_NUMBER_LENGTH_MESSAGE));
 
         verifyNoInteractions(mockService);
     }
@@ -169,7 +175,8 @@ public class GlobalExceptionHandlerTests {
         mockMvc.perform(get(URL_BANK_CARD_DATA))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string(WWW_AUTHENTICATE, BEARER_CHALLENGE))
-                .andExpect(jsonPath(MESSAGE_FIELD).value(INVALID_AUTHORIZATION_HEADER));
+                .andExpect(jsonPath(STATUS_FIELD).value(HttpStatus.UNAUTHORIZED.value()))
+                .andExpect(jsonPath(DETAIL_FIELD).value(INVALID_AUTHORIZATION_HEADER));
     }
 
     @Test
@@ -180,7 +187,8 @@ public class GlobalExceptionHandlerTests {
         mockMvc.perform(get(URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath(MESSAGE_FIELD).value(UNEXPECTED_INTERNAL_ERROR))
+                .andExpect(jsonPath(STATUS_FIELD).value(HttpStatus.INTERNAL_SERVER_ERROR.value()))
+                .andExpect(jsonPath(DETAIL_FIELD).value(UNEXPECTED_INTERNAL_ERROR))
                 .andExpect(content().string(not(containsString(INTERNAL_DETAIL))));
     }
 
