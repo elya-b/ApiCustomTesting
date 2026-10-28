@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.apicontracts.IAuthApi;
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
-import elya.restclient.http.IRestClientApi;
 import elya.restclient.exceptions.RestClientException;
+import elya.restclient.http.IRestClientApi;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;

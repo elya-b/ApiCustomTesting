@@ -18,7 +18,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static elya.restclient.constants.messages.ExceptionMessages.*;
+import static elya.restclient.constants.messages.ExceptionMessages.CAN_NOT_DELETE_CARD_WITH_ID;
+import static elya.restclient.constants.messages.ExceptionMessages.CARD_NOT_FOUND_WITH_ID;
 
 /**
  * Unified entry point for all bank-related API operations.

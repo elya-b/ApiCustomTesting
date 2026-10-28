@@ -2,7 +2,6 @@ package emulator.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.ApiEmulator;
-import elya.emulator.web.ApiEmulatorController;
 import elya.card.constants.CardType;
 import elya.card.constants.Currency;
 import elya.dto.auth.AuthRequest;
@@ -14,6 +13,8 @@ import elya.dto.bankcard.BankCardResponse;
 import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.services.AuthenticationService;
 import elya.emulator.services.MockService;
+import elya.emulator.services.TokenManagerService;
+import elya.emulator.web.ApiEmulatorController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +27,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static elya.constants.ApiEndpoints.*;
+import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
+import static elya.constants.ApiEndpoints.URL_TOKEN;
 import static elya.emulator.constants.logs.EmulatorErrorLogs.INVALID_OR_MISSING_CREDENTIALS;
 import static elya.emulator.constants.messages.ResponseMessages.MOCK_CLEARED;
 import static elya.enums.responsemodel.AuthToken.SUCCESS;
@@ -53,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>POST /bank-cards/data — mock set successfully (200, card fields validated)</li>
  *   <li>POST /bank-cards/data — empty card list returns size=0 (200)</li>
  *   <li>POST /bank-cards/data — missing request body (400)</li>
- *   <li>POST /bank-cards/data — missing Authorization header (400)</li>
+ *   <li>POST /bank-cards/data — missing Authorization header (401)</li>
  *   <li>POST /bank-cards/data — invalid token format (401)</li>
  *   <li>POST /token — token generated successfully (200)</li>
  *   <li>POST /token — invalid credentials (401)</li>
@@ -74,6 +76,9 @@ public class ApiEmulatorControllerTests {
 
     @MockitoBean
     private MockService mockService;
+
+    @MockitoBean
+    private TokenManagerService tokenManagerService;
 
     private static final Long CARD_ID = 1L;
     private static final Long CARD_NUMBER = 4444333322221111L;
@@ -252,13 +257,13 @@ public class ApiEmulatorControllerTests {
 
     @Test
     @DisplayName("POST " + URL_BANK_CARD_DATA + " - Missing Authorization Header")
-    void setMockResponse_ShouldReturn400_WhenHeaderIsMissing() throws Exception {
+    void setMockResponse_ShouldReturn401_WhenHeaderIsMissing() throws Exception {
         BankCardListRequest requestWrapper = BankCardListRequest.of(Collections.emptyList());
 
         mockMvc.perform(post(URL_BANK_CARD_DATA)
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestWrapper)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

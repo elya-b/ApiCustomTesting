@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.apicontracts.IBankCardApi;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardResponse;
-import elya.restclient.http.IRestClientApi;
 import elya.restclient.exceptions.ApiHttpStatusException;
 import elya.restclient.exceptions.RestClientException;
+import elya.restclient.http.IRestClientApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -17,12 +17,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static elya.constants.ApiEndpoints.*;
-import static elya.constants.enums.HttpHeaderValues.*;
-import static elya.enums.responsemodel.ApiBankCards.*;
-import static elya.restclient.constants.logs.ErrorLogs.*;
-import static elya.restclient.constants.messages.ExceptionMessages.*;
-import static org.springframework.http.HttpHeaders.*;
+import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
+import static elya.constants.enums.HttpHeaderValues.BEARER;
+import static elya.enums.responsemodel.ApiBankCards.CARDS;
+import static elya.enums.responsemodel.ApiBankCards.RESPONSE;
+import static elya.restclient.constants.logs.ErrorLogs.PARSING_ERROR;
+import static elya.restclient.constants.messages.ExceptionMessages.GET_CARDS_EXCEPTION;
+import static elya.restclient.constants.messages.ExceptionMessages.UNEXPECTED_JSON_EXCEPTION;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
 /**
  * Implementation of the bank card API client.

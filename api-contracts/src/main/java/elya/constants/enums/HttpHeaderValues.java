@@ -1,7 +1,6 @@
 package elya.constants.enums;
 
 import lombok.AllArgsConstructor;
-import lombok.ToString;
 
 /**
  * Enumeration of standard HTTP header values and prefixes used in API communication.

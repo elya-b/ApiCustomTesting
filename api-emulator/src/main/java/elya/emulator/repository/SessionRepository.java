@@ -14,8 +14,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
-import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.FAILED_LOAD_SESSION_FROM_FILE;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.FAILED_SAVE_SESSION_TO_STORAGE;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.LOADED_SESSIONS_FROM_STORAGE;
 
 /**
  * Repository for managing active emulator sessions.

@@ -4,15 +4,15 @@ import elya.apicontracts.IAuthApi;
 import elya.credentials.ApiEmulatorCredentialsService;
 import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
-import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.constants.formats.DataTransformer;
+import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.tokens.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.INVALID_OR_MISSING_CREDENTIALS;
 import static org.apache.logging.log4j.util.Strings.isBlank;
 
 /**

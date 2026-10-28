@@ -8,7 +8,8 @@ import org.springframework.boot.convert.DurationUnit;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
-import static elya.constants.exceptions.ExceptionMessage.*;
+import static elya.constants.exceptions.ExceptionMessage.TOKEN_EXPIRATION_MUST_BE_POSITIVE;
+import static elya.constants.exceptions.ExceptionMessage.TOKEN_ISSUER_MUST_NOT_BE_BLANK;
 
 /**
  * Token settings bound from {@code api.credentials.token.*}.
