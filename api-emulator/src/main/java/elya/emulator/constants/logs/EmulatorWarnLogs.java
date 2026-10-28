@@ -15,4 +15,7 @@ public class EmulatorWarnLogs {
 
     /** Logged when the application fails to clean up the persistence file from the disk. */
     public static final String FAILED_DELETE_STORAGE_FILE = "Failed to delete persistence storage file.";
+
+    /** Logged when a request is rejected with a 4xx status: status code, request description, client-facing reason. */
+    public static final String REQUEST_REJECTED = "Request rejected with status [{}] ({}): {}";
 }

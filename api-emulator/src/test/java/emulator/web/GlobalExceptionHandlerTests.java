@@ -1,0 +1,203 @@
+package emulator.web;
+
+import elya.ApiEmulator;
+import elya.emulator.services.AuthenticationService;
+import elya.emulator.services.MockService;
+import elya.emulator.services.TokenManagerService;
+import elya.emulator.web.ApiEmulatorController;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpMethod;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.stream.Stream;
+
+import static elya.constants.ApiEndpoints.*;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Named.named;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpHeaders.*;
+import static org.springframework.http.MediaType.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Unit tests (WebMvcTest) for {@link elya.emulator.web.GlobalExceptionHandler}.
+ * <ul>
+ *   <li>Unknown path — 404 instead of 500</li>
+ *   <li>Unsupported HTTP method — 405 with the {@code Allow} header</li>
+ *   <li>Unsupported Content-Type — 415</li>
+ *   <li>Path variable of the wrong type — 400</li>
+ *   <li>Unreadable request body — 400 with the reason per cause (parameterized)</li>
+ *   <li>Bean validation failure — 400 with the field validation message</li>
+ *   <li>Missing Authorization header — 401 with {@code WWW-Authenticate: Bearer}</li>
+ *   <li>Unexpected exception — 500 without internal details</li>
+ * </ul>
+ */
+@WebMvcTest(ApiEmulatorController.class)
+@ContextConfiguration(classes = ApiEmulator.class)
+public class GlobalExceptionHandlerTests {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private AuthenticationService authService;
+
+    @MockitoBean
+    private MockService mockService;
+
+    @MockitoBean
+    private TokenManagerService tokenManagerService;
+
+    // Request
+    private static final String FULL_TOKEN = "Bearer token";
+    private static final String CLEAN_TOKEN = "token";
+    private static final String UNKNOWN_PATH = "/api/v1/elya-bank/unknown";
+    private static final String NOT_A_NUMBER = "abc";
+    private static final String PLAIN_TEXT_BODY = "cards";
+
+    // Request bodies
+    private static final String EMPTY_BODY = "";
+    private static final String BROKEN_JSON = "{";
+    private static final String JSON_ARRAY = "[]";
+    private static final String VALID_CARD_NUMBER = "4444333322221111";
+    private static final String SHORT_CARD_NUMBER = "123";
+    private static final String NOT_A_NUMBER_JSON = "\"" + NOT_A_NUMBER + "\"";
+    private static final String CARD_TYPE_JSON_VALUE = "\"debit\"";
+    private static final String CARD_TYPE_CONSTANT_NAME = "\"DEBIT\"";
+    private static final String CARD_JSON_TEMPLATE = """
+            {"cards":[{"cardNumber":%s,"cardType":%s,"currency":"EUR"}]}""";
+
+    // Expected response
+    private static final String SUCCESS_FIELD = "$.Success";
+    private static final String MESSAGE_FIELD = "$.Message";
+    private static final String BEARER_CHALLENGE = "Bearer";
+    private static final String CARD_TYPE_PATH = "cards[0].cardType";
+    private static final String CARD_NUMBER_PATH = "cards[0].cardNumber";
+    private static final String CARD_NUMBER_LENGTH_MESSAGE = "Card number must be 16 digits";
+    private static final String INTERNAL_DETAIL = "connection pool exhausted";
+
+    @Test
+    @DisplayName("GET unknown path - Should return 404 instead of 500")
+    void unknownPath_ShouldReturn404_WhenNoHandlerMatches() throws Exception {
+        mockMvc.perform(get(UNKNOWN_PATH))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath(SUCCESS_FIELD).value(false))
+                .andExpect(jsonPath(MESSAGE_FIELD).value(RESOURCE_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("PUT " + URL_BANK_CARD_DATA + " - Should return 405 with the Allow header")
+    void unsupportedMethod_ShouldReturn405WithAllowHeader() throws Exception {
+        mockMvc.perform(put(URL_BANK_CARD_DATA))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string(ALLOW, containsString(HttpMethod.GET.name())))
+                .andExpect(jsonPath(SUCCESS_FIELD).value(false));
+    }
+
+    @Test
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Should return 415 for a non-JSON body")
+    void unsupportedMediaType_ShouldReturn415_WhenContentTypeIsNotJson() throws Exception {
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
+                        .header(AUTHORIZATION, FULL_TOKEN)
+                        .contentType(TEXT_PLAIN)
+                        .content(PLAIN_TEXT_BODY))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath(SUCCESS_FIELD).value(false));
+
+        verifyNoInteractions(mockService);
+    }
+
+    @Test
+    @DisplayName("GET " + URL_BANK_CARD_DATA + "/{cardId} - Should return 400 when cardId is not a number")
+    void typeMismatch_ShouldReturn400_WhenCardIdIsNotANumber() throws Exception {
+        mockMvc.perform(get(URL_BANK_CARD_DATA + "/" + NOT_A_NUMBER)
+                        .header(AUTHORIZATION, FULL_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath(SUCCESS_FIELD).value(false));
+
+        verifyNoInteractions(mockService);
+    }
+
+    @ParameterizedTest(name = "[{index}] {0}")
+    @MethodSource("unreadableBodies")
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Should return 400 with the reason the body is unreadable")
+    void unreadableBody_ShouldReturn400WithReason(String body, String expectedMessage) throws Exception {
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
+                        .header(AUTHORIZATION, FULL_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath(SUCCESS_FIELD).value(false))
+                .andExpect(jsonPath(MESSAGE_FIELD).value(expectedMessage));
+
+        verifyNoInteractions(mockService);
+    }
+
+    @Test
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Should return 400 with the field validation message")
+    void validation_ShouldReturn400WithFieldMessage_WhenCardNumberIsTooShort() throws Exception {
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
+                        .header(AUTHORIZATION, FULL_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content(cardJson(SHORT_CARD_NUMBER, CARD_TYPE_JSON_VALUE)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath(MESSAGE_FIELD).value(CARD_NUMBER_LENGTH_MESSAGE));
+
+        verifyNoInteractions(mockService);
+    }
+
+    @Test
+    @DisplayName("GET " + URL_BANK_CARD_DATA + " - Should return 401 with the Bearer challenge")
+    void unauthorized_ShouldReturn401WithBearerChallenge_WhenAuthorizationHeaderIsMissing() throws Exception {
+        mockMvc.perform(get(URL_BANK_CARD_DATA))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(WWW_AUTHENTICATE, BEARER_CHALLENGE))
+                .andExpect(jsonPath(MESSAGE_FIELD).value(INVALID_AUTHORIZATION_HEADER));
+    }
+
+    @Test
+    @DisplayName("GET " + URL_BANK_CARD_DATA + " - Should return 500 without internal details")
+    void unexpectedException_ShouldReturn500WithoutInternalDetails() throws Exception {
+        when(mockService.getApiBankCards(CLEAN_TOKEN)).thenThrow(new IllegalStateException(INTERNAL_DETAIL));
+
+        mockMvc.perform(get(URL_BANK_CARD_DATA)
+                        .header(AUTHORIZATION, FULL_TOKEN))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath(MESSAGE_FIELD).value(UNEXPECTED_INTERNAL_ERROR))
+                .andExpect(content().string(not(containsString(INTERNAL_DETAIL))));
+    }
+
+    private static Stream<Arguments> unreadableBodies() {
+        return Stream.of(
+                Arguments.of(named("empty body", EMPTY_BODY), REQUEST_BODY_MISSING),
+                Arguments.of(named("broken JSON", BROKEN_JSON), MALFORMED_REQUEST_BODY),
+                Arguments.of(named("array instead of object", JSON_ARRAY), MALFORMED_REQUEST_BODY),
+                Arguments.of(named("enum constant name instead of its JSON value",
+                                cardJson(VALID_CARD_NUMBER, CARD_TYPE_CONSTANT_NAME)),
+                        INVALID_FIELD_VALUE.formatted(CARD_TYPE_PATH)),
+                Arguments.of(named("text in a numeric field",
+                                cardJson(NOT_A_NUMBER_JSON, CARD_TYPE_JSON_VALUE)),
+                        INVALID_FIELD_VALUE.formatted(CARD_NUMBER_PATH)));
+    }
+
+    private static String cardJson(String cardNumber, String cardType) {
+        return CARD_JSON_TEMPLATE.formatted(cardNumber, cardType);
+    }
+}
