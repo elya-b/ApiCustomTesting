@@ -9,11 +9,13 @@ import elya.dto.auth.AuthResponse;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
 import elya.dto.bankcard.BankCardRequest;
+import elya.dto.bankcard.BankCardResponse;
 import elya.emulator.repository.MockRepository;
 import elya.emulator.repository.SessionRepository;
 import elya.emulator.services.MockService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -33,10 +35,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static elya.constants.enums.HttpHeaderValues.BEARER;
@@ -56,7 +62,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
  *   <li>{@code setMockResponse()} — returns 400 and does not save data for an invalid card number</li>
  *   <li>{@code intercept()} — returns 401 for an invalid token on every protected endpoint (parameterized)</li>
  *   <li>{@code mapping()} — correctly maps Currency and CardType enum fields from JSON</li>
- *   <li>{@code concurrency()} — safely handles concurrent requests from multiple threads</li>
+ *   <li>{@code concurrency()} — concurrent appends to one session lose no card and never repeat a cardId (repeated)</li>
  *   <li>{@code getById()} — returns 404 when a card ID does not exist</li>
  *   <li>{@code setMockResponse()} — empty list request does not overwrite existing data</li>
  *   <li>{@code init()} — gracefully handles a corrupted JSON file</li>
@@ -90,6 +96,7 @@ public class ApiEmulatorIntegrationTests {
     private static final Long CARD_NUMBER_2 = 5555666677778888L;
     private static final Long CARD_NUMBER_15 = 444455556666777L;
     private static final String INVALID_TOKEN = "invalid_token";
+    private static final int CONCURRENT_WRITERS = 8;
     private static final AuthRequest LOGIN_REQUEST = new AuthRequest("admin_user", "admin_password");
     private static final AuthRequest LOGIN_REQUEST_TEST = new AuthRequest("test_user", "test_password");
 
@@ -221,22 +228,46 @@ public class ApiEmulatorIntegrationTests {
         assertEquals(CardType.DEBIT, card.getCardType());
     }
 
-    @Test
-    @DisplayName("concurrency() - Should handle multiple concurrent updates safely")
-    void concurrency_ShouldHandleUpdates_WhenMultipleThreadsAccess() throws Exception {
-        int threads = 5;
-        ExecutorService executor = Executors.newFixedThreadPool(threads);
-        for (int i = 0; i < threads; i++) {
-            final int index = i;
-            executor.execute(() -> {
-                try {
-                    String t = loginAndGetToken(new AuthRequest("user" + index, "pass" + index));
-                    setMockResponse(t, createRequest(CARD_NUMBER + index, Currency.EUR), true);
-                } catch (Exception ignored) {}
-            });
+    @RepeatedTest(value = 10, name = "{displayName} [{currentRepetition}/{totalRepetitions}]")
+    @DisplayName("concurrency() - Concurrent appends to one session lose no card and never repeat a cardId")
+    void concurrency_ShouldKeepEveryCardWithUniqueId_WhenOneSessionIsUpdatedInParallel() throws Exception {
+        String token = loginAndGetToken(LOGIN_REQUEST);
+        CountDownLatch ready = new CountDownLatch(CONCURRENT_WRITERS);
+        CountDownLatch start = new CountDownLatch(1);
+
+        List<Callable<BankCardListResponse>> writers = IntStream.range(0, CONCURRENT_WRITERS)
+                .mapToObj(i -> (Callable<BankCardListResponse>) () -> {
+                    ready.countDown();
+                    start.await();
+                    return mockService.setMockResponse(token, createRequest(CARD_NUMBER + i, Currency.EUR));
+                })
+                .toList();
+
+        ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_WRITERS);
+        try {
+            List<Future<BankCardListResponse>> results = writers.stream().map(executor::submit).toList();
+            assertTrue(ready.await(5, TimeUnit.SECONDS), "All writers must be ready before the start");
+            start.countDown();
+            for (Future<BankCardListResponse> result : results) {
+                result.get(5, TimeUnit.SECONDS);
+            }
+        } finally {
+            executor.shutdownNow();
         }
-        executor.shutdown();
-        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+
+        List<Long> cardIds = mockService.getApiBankCards(token).getResponse().getCards().stream()
+                .map(BankCardResponse::getCardId)
+                .toList();
+
+        assertAll("Every concurrent append must survive with its own cardId",
+                () -> assertThat(cardIds)
+                        .as("No append may be lost")
+                        .hasSize(CONCURRENT_WRITERS),
+                () -> assertThat(cardIds)
+                        .as("cardIds must be unique and run from 1 to %d", CONCURRENT_WRITERS)
+                        .containsExactlyInAnyOrderElementsOf(
+                                LongStream.rangeClosed(1, CONCURRENT_WRITERS).boxed().toList())
+        );
     }
 
     @Test
