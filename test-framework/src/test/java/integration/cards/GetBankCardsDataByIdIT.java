@@ -65,13 +65,18 @@ public class GetBankCardsDataByIdIT extends AbstractApiTest {
     void getApiBankCardById_ShouldReturn404_WhenCardIdDoesNotExist() {
         String token = emulator.getAuthToken();
         Long nonExistentId = 999999L;
+        String expectedDetail = "Card with ID [" + nonExistentId + "] not found";
 
         var exception = assertThrows(ApiHttpStatusException.class,
                 () -> clientApi.getApiBankCardById(token, nonExistentId));
+        attachJson("Error response", exception.getResponseBody());
 
-        verify("A non-existent card ID must be answered with 404", () ->
-                assertEquals(404, exception.getStatusCode(),
-                        "Status code must be 404, got: " + exception.getStatusCode()));
+        verify("A non-existent card ID must be answered with 404 and the missing ID", () -> assertAll(
+                () -> assertEquals(404, exception.getStatusCode(),
+                        "Status code must be 404, got: " + exception.getStatusCode()),
+                () -> assertTrue(exception.getResponseBody().contains(expectedDetail),
+                        "Body must name the missing card, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test

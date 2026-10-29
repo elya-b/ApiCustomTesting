@@ -27,17 +27,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
-import static elya.constants.ApiEndpoints.URL_TOKEN;
-import static elya.emulator.constants.logs.EmulatorErrorLogs.INVALID_OR_MISSING_CREDENTIALS;
-import static elya.emulator.constants.messages.ResponseMessages.MOCK_CLEARED;
-import static elya.enums.responsemodel.AuthToken.SUCCESS;
+import static elya.constants.ApiEndpoints.*;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
+import static elya.emulator.constants.messages.ResponseMessages.*;
+import static elya.enums.responsemodel.AuthToken.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.HttpHeaders.*;
+import static org.springframework.http.MediaType.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -93,6 +93,7 @@ public class ApiEmulatorControllerTests {
             .currency(Currency.EUR)
             .build();
     private static final BankCardListResponse DEFAULT_CARD_LIST_RESPONSE = BankCardListResponse.of(List.of(DEFAULT_CARD_RESPONSE));
+    private static final String DETAIL_FIELD = "$.detail";
 
     @Test
     @DisplayName("GET " + URL_BANK_CARD_DATA + " - Success")
@@ -138,9 +139,10 @@ public class ApiEmulatorControllerTests {
     void getBankCardById_ShouldReturn404() throws Exception {
         when(mockService.getApiBankCardById(CLEAN_TOKEN, CARD_ID)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get(FULL_URL_BANK_CARD_DATA) // Requesting specific ID
+        mockMvc.perform(get(FULL_URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN))
-                .andExpect(status().isNotFound()); // Expecting 404 instead of 200
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath(DETAIL_FIELD).value(CARD_NOT_FOUND.formatted(CARD_ID)));
     }
 
     @Test
@@ -176,7 +178,8 @@ public class ApiEmulatorControllerTests {
 
         mockMvc.perform(delete(FULL_URL_BANK_CARD_DATA)
                         .header(AUTHORIZATION, FULL_TOKEN))
-                .andExpect(status().isNotFound()); // Expecting 404 instead of 200
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath(DETAIL_FIELD).value(CARD_NOT_FOUND.formatted(CARD_ID)));
     }
 
     @Test

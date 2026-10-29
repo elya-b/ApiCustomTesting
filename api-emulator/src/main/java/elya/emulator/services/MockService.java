@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
-import static elya.emulator.constants.logs.EmulatorWarnLogs.*;
 import static elya.emulator.logging.SensitiveDataMasker.maskToken;
 
 /**
@@ -126,7 +125,6 @@ public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHt
                 }));
 
         if (written.isEmpty()) {
-            log.warn(CARD_NOT_FOUND_BY_ID_FOR_DELETION, cardId);
             return Optional.empty();
         }
         log.info(CARD_WITH_ID_DELETED_SUCCESSFULLY, cardId);
