@@ -56,4 +56,10 @@ public class ExceptionMessages {
 
     /** Error message for a request path that matches no endpoint. */
     public static final String RESOURCE_NOT_FOUND = "Resource not found";
+
+    /**
+     * Error message template for a card ID that the session mock does not contain.
+     * <p>The argument is the requested card ID.</p>
+     */
+    public static final String CARD_NOT_FOUND = "Card with ID [%d] not found";
 }

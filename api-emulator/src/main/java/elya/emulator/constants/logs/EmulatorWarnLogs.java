@@ -10,9 +10,6 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class EmulatorWarnLogs {
 
-    /** Logged when a card deletion is requested but the ID does not exist in the state. */
-    public static final String CARD_NOT_FOUND_BY_ID_FOR_DELETION = "Card with ID [{}] not found for deletion";
-
     /** Logged when the application fails to clean up the persistence file from the disk. */
     public static final String FAILED_DELETE_STORAGE_FILE = "Failed to delete persistence storage file.";
 

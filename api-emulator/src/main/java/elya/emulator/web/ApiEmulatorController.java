@@ -4,6 +4,7 @@ import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
+import elya.emulator.exceptions.CardNotFoundException;
 import elya.emulator.services.AuthenticationService;
 import elya.emulator.services.MockService;
 import elya.emulator.web.auth.SessionToken;
@@ -99,7 +100,8 @@ public class ApiEmulatorController {
      *
      * @param token  the authenticated session token
      * @param cardId the unique long identifier of the bank card
-     * @return a JSON object with the deleted cardId or a 404 Not Found status
+     * @return a JSON object with the deleted cardId
+     * @throws CardNotFoundException if the session mock holds no card with {@code cardId}
      */
     @Operation(
             summary = "Delete Specific Mock Card",
@@ -108,11 +110,11 @@ public class ApiEmulatorController {
     @ApiResponse(responseCode = "200", description = "Card successfully removed")
     @ApiResponse(responseCode = "404", description = "Card with the specified ID not found")
     @DeleteMapping(value = URL_BANK_CARD_DATA_ID, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> deleteBankCardById(@Parameter(hidden = true) @SessionToken String token,
-                                                @PathVariable(name = "cardId") Long cardId) {
-        return mockService.deleteApiBankCardById(token, cardId)
-                .map(id -> ResponseEntity.ok(Map.of("cardId", id)))
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Map<String, Long>> deleteBankCardById(@Parameter(hidden = true) @SessionToken String token,
+                                                                @PathVariable(name = "cardId") Long cardId) {
+        Long deletedId = mockService.deleteApiBankCardById(token, cardId)
+                .orElseThrow(() -> new CardNotFoundException(cardId));
+        return ResponseEntity.ok(Map.of("cardId", deletedId));
     }
 
     /**
@@ -121,7 +123,8 @@ public class ApiEmulatorController {
      *
      * @param token  the authenticated session token
      * @param cardId (Optional) the unique identifier of a specific card
-     * @return the requested card(s) or a 404 Not Found if the specific ID is missing
+     * @return the requested card or the full list of cards
+     * @throws CardNotFoundException if {@code cardId} is given and the session mock holds no such card
      */
     @Operation(
             summary = "Get Bank Cards",
@@ -135,9 +138,8 @@ public class ApiEmulatorController {
     public ResponseEntity<?> getBankCards(@Parameter(hidden = true) @SessionToken String token,
                                           @PathVariable(name = "cardId", required = false) Long cardId) {
         if (cardId != null) {
-            return mockService.getApiBankCardById(token, cardId)
-                    .map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.notFound().build());
+            return ResponseEntity.ok(mockService.getApiBankCardById(token, cardId)
+                    .orElseThrow(() -> new CardNotFoundException(cardId)));
         }
         return ResponseEntity.ok(mockService.getApiBankCards(token));
     }

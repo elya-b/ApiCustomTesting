@@ -15,8 +15,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for deleting a card by ID (DELETE /bank-cards/data/{id}).
@@ -75,14 +74,17 @@ public class DeleteBankCardsDataByIdIT extends AbstractApiTest {
     void deleteApiBankCardById_ShouldReturn404_WhenCardIdDoesNotExist() {
         String token = emulator.getAuthToken();
         Long nonExistentId = 999999L;
+        String expectedDetail = "Card with ID [" + nonExistentId + "] not found";
 
         var exception = assertThrows(ApiHttpStatusException.class,
                 () -> clientApi.deleteApiBankCardById(token, nonExistentId));
-
         attachJson("Error response", exception.getResponseBody());
 
-        verify("Deleting a non-existent ID must fail with 404", () ->
-                assertEquals(404, exception.getStatusCode(), "Status code must be 404"));
+        verify("Deleting a non-existent ID must fail with 404 and name the missing ID", () -> assertAll(
+                () -> assertEquals(404, exception.getStatusCode(), "Status code must be 404"),
+                () -> assertTrue(exception.getResponseBody().contains(expectedDetail),
+                        "Body must name the missing card, got: " + exception.getResponseBody())
+        ));
     }
 
     @Test
