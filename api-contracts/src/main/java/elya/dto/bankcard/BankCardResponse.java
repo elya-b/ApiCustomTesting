@@ -1,15 +1,12 @@
 package elya.dto.bankcard;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import elya.card.BankCard;
-import elya.card.constants.CardType;
-import elya.card.constants.Currency;
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.*;
+import elya.card.*;
+import elya.card.constants.*;
+import io.swagger.v3.oas.annotations.media.*;
 import lombok.*;
-import lombok.extern.slf4j.Slf4j;
 
-import java.math.BigDecimal;
+import java.math.*;
 
 /**
  * Data Transfer Object representing the bank card details as returned by the API.

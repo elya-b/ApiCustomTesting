@@ -1,18 +1,16 @@
 package elya.restclient.api;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.apicontracts.IAuthApi;
-import elya.dto.auth.AuthRequest;
-import elya.dto.auth.AuthResponse;
-import elya.restclient.exceptions.RestClientException;
-import elya.restclient.http.IRestClientApi;
-import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.*;
+import elya.apicontracts.*;
+import elya.dto.auth.*;
+import elya.restclient.exceptions.*;
+import elya.restclient.http.*;
+import org.springframework.stereotype.*;
 
-import java.util.Collections;
+import java.util.*;
 
-import static elya.constants.ApiEndpoints.URL_TOKEN;
-import static elya.restclient.constants.messages.ExceptionMessages.GENERATE_TOKEN_EXCEPTION;
+import static elya.constants.ApiEndpoints.*;
+import static elya.restclient.constants.messages.ExceptionMessages.*;
 
 /**
  * Implementation of the authentication API client.

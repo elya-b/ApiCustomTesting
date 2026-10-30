@@ -1,14 +1,11 @@
 package elya.dto.bankcard;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.*;
+import jakarta.validation.*;
+import jakarta.validation.constraints.*;
+import lombok.*;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * Data Transfer Object acting as a request wrapper for bulk bank card mocking.

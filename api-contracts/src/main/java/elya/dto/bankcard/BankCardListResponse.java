@@ -1,15 +1,10 @@
 package elya.dto.bankcard;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import elya.card.BankCard;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.*;
+import elya.card.*;
+import lombok.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * Root Data Transfer Object for bank card list responses.

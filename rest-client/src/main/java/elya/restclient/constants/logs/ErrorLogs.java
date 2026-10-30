@@ -1,6 +1,6 @@
 package elya.restclient.constants.logs;
 
-import lombok.experimental.UtilityClass;
+import lombok.experimental.*;
 
 /**
  * Collection of error message templates used for logging within the HTTP client engine.

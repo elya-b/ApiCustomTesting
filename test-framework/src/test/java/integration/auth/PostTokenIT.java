@@ -1,17 +1,15 @@
 package integration.auth;
 
-import elya.allure.Priority;
-import elya.allure.PriorityLevel;
-import elya.authentication.Token;
-import elya.constants.Role;
-import elya.dto.auth.AuthRequest;
-import elya.restclient.exceptions.ApiHttpStatusException;
-import integration.AbstractApiTest;
+import elya.allure.*;
+import elya.authentication.*;
+import elya.constants.*;
+import elya.dto.auth.*;
+import elya.restclient.exceptions.*;
+import integration.*;
 import io.qameta.allure.*;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
-import static elya.constants.ApiEndpoints.URL_TOKEN;
+import static elya.constants.ApiEndpoints.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

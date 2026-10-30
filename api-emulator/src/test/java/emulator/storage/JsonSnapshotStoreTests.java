@@ -1,27 +1,23 @@
-package emulator.repository;
+package emulator.storage;
 
-import elya.emulator.objects.TokenRecord;
-import elya.emulator.repository.JsonSnapshotStore;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import elya.*;
+import elya.emulator.objects.*;
+import elya.emulator.storage.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.*;
+import org.junit.jupiter.params.*;
+import org.junit.jupiter.params.provider.*;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.api.Named.*;
 
 /**
- * Unit tests for {@link elya.emulator.repository.JsonSnapshotStore}.
+ * Unit tests for {@link JsonSnapshotStore}.
  * <ul>
  *   <li>{@code load()} — returns an empty snapshot when the file does not exist</li>
  *   <li>{@code save()} + {@code load()} — round-trips the entries</li>
@@ -30,6 +26,10 @@ import static org.junit.jupiter.api.Named.named;
  *   <li>{@code load()} — returns an empty snapshot for unreadable content (parameterized)</li>
  *   <li>{@code delete()} — removes the storage file</li>
  *   <li>{@code delete()} — does not throw when the file does not exist</li>
+ *   <li>{@code restore()} — PERSISTENT returns the last saved snapshot</li>
+ *   <li>{@code restore()} — PROCESS discards the leftovers of a previous run</li>
+ *   <li>{@code release()} — PROCESS deletes the storage file</li>
+ *   <li>{@code release()} — PERSISTENT keeps the storage file</li>
  * </ul>
  */
 public class JsonSnapshotStoreTests {
@@ -49,7 +49,7 @@ public class JsonSnapshotStoreTests {
     @BeforeEach
     void setUp() {
         storageFile = tempDir.resolve(STORAGE_FILE_NAME);
-        store = new JsonSnapshotStore<>(storageFile, TokenRecord.class);
+        store = storeWith(StorageRetention.PERSISTENT);
     }
 
     @Test
@@ -74,7 +74,8 @@ public class JsonSnapshotStoreTests {
     @DisplayName("save() - Should create missing parent directories")
     void save_ShouldCreateParentDirectories() {
         Path nestedFile = tempDir.resolve("nested").resolve("dir").resolve(STORAGE_FILE_NAME);
-        JsonSnapshotStore<TokenRecord> nestedStore = new JsonSnapshotStore<>(nestedFile, TokenRecord.class);
+        JsonSnapshotStore<TokenRecord> nestedStore =
+                new JsonSnapshotStore<>(nestedFile, TokenRecord.class, StorageRetention.PERSISTENT);
 
         nestedStore.save(Map.of(TOKEN, RECORD));
 
@@ -120,6 +121,53 @@ public class JsonSnapshotStoreTests {
     @DisplayName("delete() - Should not throw when the file does not exist")
     void delete_ShouldNotThrow_WhenFileDoesNotExist() {
         assertDoesNotThrow(store::delete, "Deleting a missing file must be a no-op");
+    }
+
+    @Test
+    @DisplayName("restore() - PERSISTENT should return the last saved snapshot")
+    void restore_ShouldReturnSavedSnapshot_WhenPersistent() {
+        store.save(Map.of(TOKEN, RECORD));
+
+        Map<String, TokenRecord> restored = storeWith(StorageRetention.PERSISTENT).restore();
+
+        assertEquals(Map.of(TOKEN, RECORD), restored, "PERSISTENT must restore the saved snapshot");
+    }
+
+    @Test
+    @DisplayName("restore() - PROCESS should discard the leftovers of a previous run")
+    void restore_ShouldDiscardLeftovers_WhenProcess() {
+        store.save(Map.of(TOKEN, RECORD));
+
+        Map<String, TokenRecord> restored = storeWith(StorageRetention.PROCESS).restore();
+
+        assertAll("Leftovers of a previous run must be discarded",
+                () -> assertTrue(restored.isEmpty(), "PROCESS must start empty"),
+                () -> assertFalse(Files.exists(storageFile), "The leftover file must be deleted"));
+    }
+
+    @Test
+    @DisplayName("release() - PROCESS should delete the storage file")
+    void release_ShouldDeleteFile_WhenProcess() {
+        JsonSnapshotStore<TokenRecord> processStore = storeWith(StorageRetention.PROCESS);
+        processStore.save(Map.of(TOKEN, RECORD));
+
+        processStore.release();
+
+        assertFalse(Files.exists(storageFile), "PROCESS must not leave data on disk after shutdown");
+    }
+
+    @Test
+    @DisplayName("release() - PERSISTENT should keep the storage file")
+    void release_ShouldKeepFile_WhenPersistent() {
+        store.save(Map.of(TOKEN, RECORD));
+
+        store.release();
+
+        assertTrue(Files.exists(storageFile), "PERSISTENT must keep the data for the next run");
+    }
+
+    private JsonSnapshotStore<TokenRecord> storeWith(StorageRetention retention) {
+        return new JsonSnapshotStore<>(storageFile, TokenRecord.class, retention);
     }
 
     private static Stream<Arguments> unreadableContents() {

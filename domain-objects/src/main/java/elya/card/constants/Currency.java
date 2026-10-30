@@ -1,7 +1,7 @@
 package elya.card.constants;
 
-import com.fasterxml.jackson.annotation.JsonValue;
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.*;
+import lombok.*;
 
 /**
  * Enumeration of supported international currencies for bank card accounts.

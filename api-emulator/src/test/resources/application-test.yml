@@ -1,11 +1,11 @@
-mock:
-  storage:
-    path: target/test-data/mock_response.json
-session:
-  storage:
-    path: target/test-data/session.json
-
 api:
+  emulator:
+    storage:
+      sessions:
+        path: target/test-data/session.json
+      mocks:
+        path: target/test-data/mock_response.json
+
   credentials:
     users:
       - login: "admin_user"

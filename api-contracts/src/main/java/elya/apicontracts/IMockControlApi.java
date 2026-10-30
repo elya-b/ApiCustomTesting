@@ -1,9 +1,8 @@
 package elya.apicontracts;
 
-import elya.dto.bankcard.BankCardListRequest;
-import elya.dto.bankcard.BankCardListResponse;
+import elya.dto.bankcard.*;
 
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Contract for controlling mock bank card data in the emulator.

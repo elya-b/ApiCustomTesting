@@ -1,24 +1,20 @@
 package elya.restclient.api;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.apicontracts.IMockControlApi;
-import elya.dto.bankcard.BankCardListRequest;
-import elya.dto.bankcard.BankCardListResponse;
-import elya.restclient.exceptions.ApiHttpStatusException;
-import elya.restclient.exceptions.RestClientException;
-import elya.restclient.http.IRestClientApi;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.databind.*;
+import elya.apicontracts.*;
+import elya.dto.bankcard.*;
+import elya.restclient.exceptions.*;
+import elya.restclient.http.*;
+import lombok.extern.slf4j.*;
+import org.springframework.stereotype.*;
 
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
-import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
-import static elya.constants.enums.HttpHeaderValues.BEARER;
-import static elya.restclient.constants.logs.ErrorLogs.FAILED_TO_SET_MOCK_RESPONSE;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static elya.constants.ApiEndpoints.*;
+import static elya.constants.enums.HttpHeaderValues.*;
+import static elya.restclient.constants.logs.ErrorLogs.*;
+import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Implementation of the mock control API client.

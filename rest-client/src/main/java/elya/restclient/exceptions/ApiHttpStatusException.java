@@ -1,6 +1,6 @@
 package elya.restclient.exceptions;
 
-import lombok.Getter;
+import lombok.*;
 
 /**
  * Thrown when the server answered with a non-2xx status.

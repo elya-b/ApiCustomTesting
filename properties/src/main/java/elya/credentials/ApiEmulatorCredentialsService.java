@@ -1,7 +1,7 @@
 package elya.credentials;
 
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
+import lombok.*;
+import org.springframework.stereotype.*;
 
 /**
  * Service responsible for providing access to the emulator's security credentials.

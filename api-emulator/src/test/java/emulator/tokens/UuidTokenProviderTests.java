@@ -1,14 +1,9 @@
 package emulator.tokens;
 
-import elya.emulator.tokens.UuidTokenProvider;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.Test;
+import elya.emulator.tokens.*;
+import org.junit.jupiter.api.*;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 

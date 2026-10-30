@@ -1,7 +1,6 @@
 package elya.enums.responsemodel;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.*;
 
 /**
  * Enumeration representing key constants and status identifiers for authentication token responses.

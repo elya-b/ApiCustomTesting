@@ -1,27 +1,23 @@
 package emulator.repository;
 
-import elya.dto.bankcard.BankCardListResponse;
-import elya.dto.bankcard.BankCardResponse;
-import elya.emulator.repository.MockRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import elya.*;
+import elya.dto.bankcard.*;
+import elya.emulator.repository.*;
+import elya.emulator.storage.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.*;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.atomic.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 
 /**
  * Unit tests for {@link MockRepository}.
+ * <p>The repository runs on a {@code PERSISTENT} store, so reloading from the file can be verified.</p>
  * <ul>
  *   <li>{@code save()} — persists data in memory and creates a file on disk</li>
  *   <li>{@code find()} — returns an empty Optional when the token does not exist</li>
@@ -54,7 +50,7 @@ public class MockRepositoryTests {
     @BeforeEach
     void setUp() {
         fullPath = tempDir.resolve("test_mock_storage.json").toString();
-        repository = new MockRepository(fullPath);
+        repository = newRepository();
     }
 
     @Test
@@ -123,7 +119,7 @@ public class MockRepositoryTests {
         repository.save(TOKEN, response);
         assertTrue(new File(fullPath).exists(), "Baseline file should exist on disk");
 
-        MockRepository repository2 = new MockRepository(fullPath);
+        MockRepository repository2 = newRepository();
         assertTrue(repository2.find(TOKEN).isEmpty(), "New repository should be empty before init");
 
         repository2.init();
@@ -137,7 +133,7 @@ public class MockRepositoryTests {
         File file = new File(fullPath);
         Files.writeString(file.toPath(), "{ invalid_json: ... }");
 
-        MockRepository corruptedRepo = new MockRepository(fullPath);
+        MockRepository corruptedRepo = newRepository();
         corruptedRepo.init();
 
         assertTrue(corruptedRepo.find(TOKEN).isEmpty());
@@ -273,6 +269,11 @@ public class MockRepositoryTests {
                 () -> assertEquals(List.of(1L, 2L, 3L), cardIds(repository.find(TOKEN).orElseThrow()),
                         "The retry must build on the concurrent write, not overwrite it")
         );
+    }
+
+    private MockRepository newRepository() {
+        return new MockRepository(new JsonSnapshotStore<>(
+                Path.of(fullPath), BankCardListResponse.class, StorageRetention.PERSISTENT));
     }
 
     private static BankCardResponse card(long id) {

@@ -1,24 +1,16 @@
-package elya.emulator.repository;
+package elya.emulator.storage;
 
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.*;
+import elya.*;
+import lombok.extern.slf4j.*;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.Map;
-import java.util.Objects;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.FAILED_LOAD_STORAGE_FILE;
-import static elya.emulator.constants.logs.EmulatorErrorLogs.FAILED_SAVE_STORAGE_FILE;
-import static elya.emulator.constants.logs.EmulatorInfoLogs.LOADED_ENTRIES_FROM_STORAGE_FILE;
-import static elya.emulator.constants.logs.EmulatorInfoLogs.STORAGE_FILE_DELETED;
-import static elya.emulator.constants.logs.EmulatorWarnLogs.FAILED_DELETE_STORAGE_FILE;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
+import static elya.emulator.constants.logs.EmulatorWarnLogs.*;
 
 /**
  * Persists a key-value snapshot as a single JSON file.
@@ -27,6 +19,8 @@ import static elya.emulator.constants.logs.EmulatorWarnLogs.FAILED_DELETE_STORAG
  * <p>Writes are atomic: the snapshot goes to a temporary file in the same directory, which then
  * replaces the storage file, so a crash mid-write cannot leave a corrupted file behind.
  * I/O failures are logged and never propagated: the in-memory state stays the source of truth.</p>
+ * <p>The file lives as long as its {@link StorageRetention} allows: the owning repository calls
+ * {@link #restore()} on startup and {@link #release()} on shutdown.</p>
  *
  * @param <V> the type of the stored values
  */
@@ -39,16 +33,44 @@ public final class JsonSnapshotStore<V> {
     private final Path file;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final JavaType snapshotType;
+    private final StorageRetention retention;
 
     /**
      * Creates a store for the given file.
      *
      * @param file      the JSON file holding the snapshot; resolved to an absolute path
      * @param valueType the class of the stored values, needed to read them back despite type erasure
+     * @param retention how long the stored data lives
      */
-    public JsonSnapshotStore(Path file, Class<V> valueType) {
+    public JsonSnapshotStore(Path file, Class<V> valueType, StorageRetention retention) {
         this.file = file.toAbsolutePath().normalize();
         this.snapshotType = objectMapper.getTypeFactory().constructMapType(Map.class, String.class, valueType);
+        this.retention = Objects.requireNonNull(retention, "retention");
+    }
+
+    /**
+     * Returns the data the owning repository starts with.
+     * <p>{@link StorageRetention#PERSISTENT}: the last saved snapshot.
+     * {@link StorageRetention#PROCESS}: nothing; a file left by a previous, possibly crashed,
+     * run is deleted.</p>
+     *
+     * @return the entries to start with, possibly empty
+     */
+    public synchronized Map<String, V> restore() {
+        if (retention.keepsDataAcrossRestarts()) {
+            return load();
+        }
+        delete();
+        return Map.of();
+    }
+
+    /**
+     * Applies the retention on shutdown: deletes the file unless the data must survive a restart.
+     */
+    public synchronized void release() {
+        if (!retention.keepsDataAcrossRestarts()) {
+            delete();
+        }
     }
 
     /**

@@ -1,24 +1,21 @@
 package emulator.web.auth;
 
-import elya.emulator.exceptions.TokenValidationException;
-import elya.emulator.services.TokenManagerService;
-import elya.emulator.web.auth.SessionTokenInterceptor;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
+import elya.emulator.exceptions.*;
+import elya.emulator.services.*;
+import elya.emulator.web.auth.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.params.*;
+import org.junit.jupiter.params.provider.*;
+import org.mockito.*;
+import org.mockito.junit.jupiter.*;
+import org.springframework.mock.web.*;
 
-import static elya.emulator.constants.messages.ExceptionMessages.AUTH_TOKEN_IS_EXPIRED;
-import static elya.emulator.web.auth.SessionTokenInterceptor.SESSION_TOKEN_ATTRIBUTE;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
+import static elya.emulator.web.auth.SessionTokenInterceptor.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Unit tests (Mockito) for {@link elya.emulator.web.auth.SessionTokenInterceptor}.

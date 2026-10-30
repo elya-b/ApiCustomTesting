@@ -1,6 +1,6 @@
 package elya.emulator.exceptions;
 
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 
 /**
  * Exception thrown when authentication or token validation fails.

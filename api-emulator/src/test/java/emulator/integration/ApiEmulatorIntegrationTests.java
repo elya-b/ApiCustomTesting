@@ -1,59 +1,37 @@
 package emulator.integration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.card.constants.CardType;
+import com.fasterxml.jackson.databind.*;
 import elya.card.constants.Currency;
-import elya.constants.ApiEndpoints;
-import elya.dto.auth.AuthRequest;
-import elya.dto.auth.AuthResponse;
-import elya.dto.bankcard.BankCardListRequest;
-import elya.dto.bankcard.BankCardListResponse;
-import elya.dto.bankcard.BankCardRequest;
-import elya.dto.bankcard.BankCardResponse;
-import elya.emulator.repository.MockRepository;
-import elya.emulator.repository.SessionRepository;
-import elya.emulator.services.MockService;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import elya.card.constants.*;
+import elya.constants.*;
+import elya.dto.auth.*;
+import elya.dto.bankcard.*;
+import elya.emulator.repository.*;
+import elya.emulator.services.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.*;
+import org.junit.jupiter.params.provider.*;
+import org.springframework.beans.factory.annotation.*;
+import org.springframework.boot.test.autoconfigure.web.servlet.*;
+import org.springframework.boot.test.context.*;
+import org.springframework.http.*;
+import org.springframework.test.context.*;
+import org.springframework.test.web.servlet.*;
+import org.springframework.test.web.servlet.request.*;
+import org.springframework.test.web.servlet.result.*;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
-import java.util.stream.LongStream;
-import java.util.stream.Stream;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.*;
 
-import static elya.constants.enums.HttpHeaderValues.BEARER;
-import static org.assertj.core.api.Assertions.assertThat;
+import static elya.constants.enums.HttpHeaderValues.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Integration tests for {@link elya.ApiEmulator} (full Spring context).
  * <ul>
- *   <li>{@code init()} — data persists after repository reload (JSON-based persistence)</li>
  *   <li>{@code setMockResponse()} — new cards are appended to the existing list (APPEND logic)</li>
  *   <li>{@code setMockResponse()} — cardId is incremented based on the current maximum</li>
  *   <li>{@code deleteById()} — subsequent GET returns 404 after card deletion</li>
@@ -65,7 +43,6 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
  *   <li>{@code concurrency()} — concurrent appends to one session lose no card and never repeat a cardId (repeated)</li>
  *   <li>{@code getById()} — returns 404 when a card ID does not exist</li>
  *   <li>{@code setMockResponse()} — empty list request does not overwrite existing data</li>
- *   <li>{@code init()} — gracefully handles a corrupted JSON file</li>
  *   <li>{@code setMockResponse()} — handles a large payload (100+ cards in one request)</li>
  *   <li>{@code intercept()} — returns 401 when session is invalidated (SessionRepository)</li>
  *   <li>{@code clearMockResponse()} — returns 401 and keeps the mocks of an expired session (regression)</li>
@@ -104,18 +81,6 @@ public class ApiEmulatorIntegrationTests {
     void tearDown() {
         sessionRepository.clear();
         mockRepository.clearAll();
-    }
-
-    @Test
-    @DisplayName("init() - Should survive repository reload and keep data in file")
-    void init_ShouldKeepData_WhenRepositoryReloads() throws Exception {
-        String token = loginAndGetToken(LOGIN_REQUEST);
-        setMockResponse(token, createRequest(CARD_NUMBER, Currency.EUR), true);
-        mockRepository.init();
-
-        var mock = mockRepository.find(token);
-        assertTrue(mock.isPresent(), "Data should be available after repository re-initialization");
-        assertEquals(CARD_NUMBER, mock.get().getResponse().getCards().getFirst().getCardNumber());
     }
 
     @Test
@@ -295,20 +260,6 @@ public class ApiEmulatorIntegrationTests {
                 () -> assertEquals(CARD_NUMBER, response.getFirst().getCardNumber()),
                 () -> assertEquals(Currency.EUR, response.getFirst().getCurrency())
         );
-    }
-
-    @Test
-    @DisplayName("init() - Should handle corrupted JSON file gracefully")
-    void init_ShouldHandleCorruptedFile_WhenJsonIsInvalid() throws Exception {
-        Path path = Paths.get("target/test-data/mock_response.json");
-
-        Files.createDirectories(path.getParent());
-        Files.writeString(path, "{ !!! invalid json !!! }");
-
-        assertDoesNotThrow(() -> mockRepository.init(),
-                "Repository should catch Jackson exceptions and not crash the context");
-
-        Files.deleteIfExists(path);
     }
 
     @Test

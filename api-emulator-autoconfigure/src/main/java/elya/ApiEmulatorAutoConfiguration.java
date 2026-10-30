@@ -1,14 +1,10 @@
 package elya;
 
-import elya.credentials.ApiEmulatorCredentialsStructure;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import elya.credentials.*;
+import org.springframework.boot.autoconfigure.condition.*;
+import org.springframework.boot.context.properties.*;
+import org.springframework.context.annotation.*;
+import org.springframework.security.crypto.password.*;
 
 /**
  * Spring Boot auto-configuration for the API Emulator.
@@ -25,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 )
 @EnableConfigurationProperties({
         ApiTokenProperties.class,
+        EmulatorStorageProperties.class,
         ApiEmulatorCredentialsStructure.class
 })
 public class ApiEmulatorAutoConfiguration {

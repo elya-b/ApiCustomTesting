@@ -1,6 +1,6 @@
 package elya.restclient.constants.messages;
 
-import lombok.experimental.UtilityClass;
+import lombok.experimental.*;
 
 /**
  * Centralized dictionary for high-level exception messages within the REST client.

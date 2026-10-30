@@ -1,32 +1,25 @@
 package emulator.web;
 
-import elya.ApiEmulator;
-import elya.emulator.services.AuthenticationService;
-import elya.emulator.services.MockService;
-import elya.emulator.services.TokenManagerService;
-import elya.emulator.web.ApiEmulatorController;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import elya.*;
+import elya.emulator.services.*;
+import elya.emulator.web.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.*;
+import org.junit.jupiter.params.provider.*;
+import org.springframework.beans.factory.annotation.*;
+import org.springframework.boot.test.autoconfigure.web.servlet.*;
+import org.springframework.http.*;
+import org.springframework.test.context.*;
+import org.springframework.test.context.bean.override.mockito.*;
+import org.springframework.test.web.servlet.*;
 
-import java.util.stream.Stream;
+import java.util.stream.*;
 
 import static elya.constants.ApiEndpoints.*;
 import static elya.emulator.constants.messages.ExceptionMessages.*;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Named.named;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Named.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.http.HttpHeaders.*;
 import static org.springframework.http.MediaType.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;

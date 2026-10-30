@@ -1,22 +1,20 @@
 package integration;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.annotations.ApiIntegrationTest;
-import elya.constants.Role;
-import elya.credentials.ApiEmulatorCredentialsService;
-import elya.dto.auth.AuthRequest;
-import elya.engine.services.emulator.EmulatorLifecycleManager;
-import elya.restclient.api.RestClientApi;
-import io.qameta.allure.Allure;
-import io.qameta.allure.Step;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.databind.*;
+import elya.annotations.*;
+import elya.constants.*;
+import elya.credentials.*;
+import elya.dto.auth.*;
+import elya.engine.services.emulator.*;
+import elya.restclient.api.*;
+import io.qameta.allure.*;
+import lombok.extern.slf4j.*;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.*;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.*;
+import java.nio.charset.*;
 
 /**
  * Abstract base class for all API integration tests.

@@ -1,9 +1,8 @@
 package elya.apicontracts;
 
-import elya.dto.bankcard.BankCardListResponse;
-import elya.dto.bankcard.BankCardResponse;
+import elya.dto.bankcard.*;
 
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Contract for read-only bank card API operations.

@@ -1,19 +1,13 @@
 package elya.dto.bankcard;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import elya.card.BankCard;
-import elya.card.constants.CardType;
-import elya.card.constants.Currency;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.*;
+import elya.card.*;
+import elya.card.constants.*;
+import io.swagger.v3.oas.annotations.media.*;
+import jakarta.validation.constraints.*;
+import lombok.*;
 
-import java.math.BigDecimal;
+import java.math.*;
 
 /**
  * Data Transfer Object for creating or updating bank card mock data.

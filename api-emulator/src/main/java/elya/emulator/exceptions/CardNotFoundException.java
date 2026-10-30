@@ -1,8 +1,8 @@
 package elya.emulator.exceptions;
 
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 
-import static elya.emulator.constants.messages.ExceptionMessages.CARD_NOT_FOUND;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
 
 /**
  * Exception thrown when the session mock holds no card with the requested ID.

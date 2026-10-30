@@ -1,9 +1,8 @@
 package elya.restclient.http;
 
-import elya.restclient.exceptions.ApiHttpStatusException;
-import elya.restclient.exceptions.RestClientException;
+import elya.restclient.exceptions.*;
 
-import java.util.Map;
+import java.util.*;
 
 /**
  * Interface defining resource removal API operations.

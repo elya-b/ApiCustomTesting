@@ -1,28 +1,22 @@
 package elya.emulator.web;
 
-import elya.dto.auth.AuthRequest;
-import elya.dto.auth.AuthResponse;
-import elya.dto.bankcard.BankCardListRequest;
-import elya.dto.bankcard.BankCardListResponse;
-import elya.dto.bankcard.BankCardResponse;
-import elya.emulator.exceptions.CardNotFoundException;
-import elya.emulator.services.AuthenticationService;
-import elya.emulator.services.MockService;
-import elya.emulator.web.auth.SessionToken;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import elya.dto.auth.*;
+import elya.dto.bankcard.*;
+import elya.emulator.exceptions.*;
+import elya.emulator.services.*;
+import elya.emulator.web.auth.*;
+import io.swagger.v3.oas.annotations.*;
+import io.swagger.v3.oas.annotations.responses.*;
+import io.swagger.v3.oas.annotations.tags.*;
+import jakarta.validation.*;
+import lombok.*;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.*;
 
 import static elya.constants.ApiEndpoints.*;
-import static elya.emulator.constants.messages.ResponseMessages.MOCK_CLEARED;
+import static elya.emulator.constants.messages.ResponseMessages.*;
 
 /**
  * REST controller for the bank card emulator.

@@ -1,12 +1,12 @@
 package elya;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import lombok.extern.slf4j.*;
+import org.springframework.boot.*;
+import org.springframework.boot.autoconfigure.*;
 
-import java.util.Collections;
+import java.util.*;
 
-import static elya.emulator.constants.logs.EmulatorInfoLogs.EMULATOR_STARTED_ON_PORT_SUCCESSFULLY;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
 
 /**
  * Main entry point for the Bank API Emulator application.

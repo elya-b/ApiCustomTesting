@@ -1,12 +1,12 @@
 package elya.emulator.tokens;
 
-import elya.ApiTokenProperties;
-import io.jsonwebtoken.Jwts;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import elya.*;
+import io.jsonwebtoken.*;
+import lombok.*;
+import org.springframework.stereotype.*;
 
-import javax.crypto.SecretKey;
-import java.util.Date;
+import javax.crypto.*;
+import java.util.*;
 
 /**
  * Implementation of {@link TokenProvider} that issues signed JSON Web Tokens (HS256).

@@ -1,6 +1,6 @@
 package elya.emulator.constants.logs;
 
-import lombok.experimental.UtilityClass;
+import lombok.experimental.*;
 
 /**
  * Static dictionary of error log templates used across the emulator application.

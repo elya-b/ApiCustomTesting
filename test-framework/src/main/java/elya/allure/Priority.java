@@ -1,6 +1,6 @@
 package elya.allure;
 
-import io.qameta.allure.LabelAnnotation;
+import io.qameta.allure.*;
 
 import java.lang.annotation.*;
 

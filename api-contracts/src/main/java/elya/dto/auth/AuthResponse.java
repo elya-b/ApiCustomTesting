@@ -1,14 +1,11 @@
 package elya.dto.auth;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import elya.authentication.Token;
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.*;
+import elya.authentication.*;
+import io.swagger.v3.oas.annotations.media.*;
+import lombok.*;
 
-import static elya.enums.responsemodel.AuthToken.SUCCESS;
+import static elya.enums.responsemodel.AuthToken.*;
 
 /**
  * Data Transfer Object representing the standard authentication response.

@@ -1,29 +1,23 @@
 package elya.emulator.web;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import elya.emulator.exceptions.ApiEmulatorException;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.support.DefaultMessageSourceResolvable;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ProblemDetail;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.exc.*;
+import elya.emulator.exceptions.*;
+import lombok.extern.slf4j.*;
+import org.springframework.context.support.*;
+import org.springframework.http.*;
+import org.springframework.http.converter.*;
+import org.springframework.lang.*;
+import org.springframework.web.bind.*;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.*;
+import org.springframework.web.servlet.mvc.method.annotation.*;
+import org.springframework.web.servlet.resource.*;
 
-import java.util.Optional;
+import java.util.*;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.REQUEST_FAILED;
-import static elya.emulator.constants.logs.EmulatorWarnLogs.REQUEST_REJECTED;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
+import static elya.emulator.constants.logs.EmulatorWarnLogs.*;
 import static elya.emulator.constants.messages.ExceptionMessages.*;
 
 /**

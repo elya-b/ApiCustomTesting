@@ -1,7 +1,6 @@
 package elya.constants;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.*;
 
 /**
  * Enumeration of system roles used for authorization and access control.
