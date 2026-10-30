@@ -1,63 +1,49 @@
 package elya.emulator.repository;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.dto.bankcard.BankCardListResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
-import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
-import static elya.emulator.constants.logs.EmulatorWarnLogs.FAILED_DELETE_STORAGE_FILE;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.ERROR_DURING_MOCK_PERSISTENCE_FOR_TOKEN;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.PERSISTING_MOCK_DATA_TO_STORAGE_FOR_TOKEN;
 import static elya.emulator.logging.SensitiveDataMasker.maskToken;
 
 /**
  * Repository for managing persistent mock responses.
- * Provides thread-safe in-memory storage with file-based persistence
- * to survive application restarts.
+ * <p>Keeps the mocks in a thread-safe in-memory map, which is the source of truth, and mirrors
+ * every change to a JSON file through {@link JsonSnapshotStore}, so the data survives restarts.</p>
  */
 @Slf4j
 @Component
 public class MockRepository {
-    private final String storagePath;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonSnapshotStore<BankCardListResponse> store;
     private final Map<String, BankCardListResponse> mockedResponses = new ConcurrentHashMap<>();
 
     /**
      * Initializes the repository with a configurable storage path.
-     * * @param storagePath path to the JSON file where mock data is persisted.
-     * Defaults to 'mock_response.json' if not provided via properties.
+     *
+     * @param storagePath path to the JSON file where mock data is persisted.
+     *                    Defaults to 'mock_response.json' if not provided via properties.
      */
     public MockRepository(@Value("${mock.storage.path:mock_response.json}") String storagePath) {
-        this.storagePath = storagePath;
+        this.store = new JsonSnapshotStore<>(Path.of(storagePath), BankCardListResponse.class);
     }
 
     /**
-     * Loads existing mock data from the persistence storage into memory during startup.
-     * If the file does not exist, the repository starts with an empty state.
+     * Loads the mocks saved by a previous run into memory.
+     * Starts empty if the storage file is missing or unreadable.
      */
     @PostConstruct
     public void init() {
-        File file = new File(storagePath);
-        if (file.exists()) {
-            try {
-                Map<String, BankCardListResponse> loaded = objectMapper.readValue(file,
-                        new TypeReference<ConcurrentHashMap<String, BankCardListResponse>>() {});
-                mockedResponses.putAll(loaded);
-                log.info(LOADED_MOCKED_RESPONSE_FROM_STORAGE);
-            } catch (IOException e) {
-                log.error(FAILED_LOAD_MOCK_FROM_FILE, e);
-            }
-        }
+        mockedResponses.putAll(store.load());
     }
 
     /**
@@ -71,7 +57,7 @@ public class MockRepository {
         try {
             log.info(PERSISTING_MOCK_DATA_TO_STORAGE_FOR_TOKEN, maskToken(token));
             mockedResponses.put(token, response);
-            saveToFile();
+            store.save(mockedResponses);
             return true;
         } catch (Exception e) {
             log.error(ERROR_DURING_MOCK_PERSISTENCE_FOR_TOKEN, maskToken(token), e);
@@ -100,7 +86,7 @@ public class MockRepository {
     public boolean clear(String token) {
         BankCardListResponse removed = mockedResponses.remove(token);
         if (removed != null) {
-            saveToFile();
+            store.save(mockedResponses);
         }
         return removed != null;
     }
@@ -111,31 +97,7 @@ public class MockRepository {
      */
     public void clearAll() {
         mockedResponses.clear();
-        File file = new File(storagePath);
-        if (file.exists()) {
-            if (file.delete()) {
-                log.info(STORAGE_FILE_DELETED_SUCCESSFULLY);
-            } else {
-                log.warn(FAILED_DELETE_STORAGE_FILE);
-            }
-        }
-    }
-
-    /**
-     * Internal helper method to write the current in-memory state to the JSON storage file.
-     * Synchronized to prevent concurrent write issues.
-     */
-    private synchronized void saveToFile() {
-        try {
-            File file = new File(storagePath);
-            File parentDir = file.getParentFile();
-            if (parentDir != null) {
-                parentDir.mkdirs();
-            }
-            objectMapper.writeValue(file, mockedResponses);
-        } catch (IOException e) {
-            log.error(FAILED_SAVE_SESSION_TO_STORAGE, e);
-        }
+        store.delete();
     }
 
     /**
@@ -163,7 +125,7 @@ public class MockRepository {
                     ? mockedResponses.putIfAbsent(token, next.get()) == null
                     : mockedResponses.replace(token, current, next.get());
             if (swapped) {
-                saveToFile();
+                store.save(mockedResponses);
                 return next;
             }
         }
