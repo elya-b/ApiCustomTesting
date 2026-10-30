@@ -4,6 +4,7 @@ import elya.dto.auth.AuthRequest;
 import elya.dto.auth.AuthResponse;
 import elya.dto.bankcard.BankCardListRequest;
 import elya.dto.bankcard.BankCardListResponse;
+import elya.dto.bankcard.BankCardResponse;
 import elya.emulator.exceptions.CardNotFoundException;
 import elya.emulator.services.AuthenticationService;
 import elya.emulator.services.MockService;
@@ -28,6 +29,8 @@ import static elya.emulator.constants.messages.ResponseMessages.MOCK_CLEARED;
  * <p>Provides endpoints to issue session tokens and to manage the mocked bank card data of a session.
  * Every bank card endpoint is authenticated by {@link elya.emulator.web.auth.SessionTokenInterceptor}
  * before it is invoked, so handlers receive an already validated token through {@link SessionToken}.</p>
+ * <p>Error responses are documented only by status and description here; their problem detail body,
+ * the {@code 401} of protected endpoints and the {@code 500} are added by {@link OpenApiConfig}.</p>
  */
 @Tag(name = "Bank Card Emulator", description = "Operations for managing mocked bank card responses and sessions")
 @RestController
@@ -49,6 +52,8 @@ public class ApiEmulatorController {
             description = "Verifies credentials and issues a session-based Bearer token"
     )
     @ApiResponse(responseCode = "200", description = "Authentication successful, token issued")
+    @ApiResponse(responseCode = "400", description = "Login or password is blank")
+    @ApiResponse(responseCode = "401", description = "Invalid credentials")
     @PostMapping(value = URL_TOKEN, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AuthResponse> generateAuthToken(@Valid @RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.generateAuthToken(request));
@@ -67,6 +72,7 @@ public class ApiEmulatorController {
             description = "Appends new bank card mocks to the current session storage"
     )
     @ApiResponse(responseCode = "200", description = "Mock data updated successfully")
+    @ApiResponse(responseCode = "400", description = "Request body is missing, malformed or fails validation")
     @PostMapping(value = URL_BANK_CARD_DATA, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<BankCardListResponse> setMockResponse(@Parameter(hidden = true) @SessionToken String token,
                                                                 @Valid @RequestBody BankCardListRequest request) {
@@ -118,29 +124,39 @@ public class ApiEmulatorController {
     }
 
     /**
-     * Retrieves bank card data. If a cardId is provided, returns a single card;
-     * otherwise, returns the full list of mocked cards for the session.
+     * Retrieves all mocked bank cards of the current session.
      *
-     * @param token  the authenticated session token
-     * @param cardId (Optional) the unique identifier of a specific card
-     * @return the requested card or the full list of cards
-     * @throws CardNotFoundException if {@code cardId} is given and the session mock holds no such card
+     * @param token the authenticated session token
+     * @return the full list of mocked cards, empty if none were set
      */
     @Operation(
             summary = "Get Bank Cards",
-            description = "Retrieves all cards or a specific card based on path variables"
+            description = "Retrieves all mocked cards of the current session"
     )
-    @ApiResponse(responseCode = "200", description = "Data retrieved successfully")
-    @ApiResponse(responseCode = "404", description = "Specific card ID not found")
-    @GetMapping(
-            value = {URL_BANK_CARD_DATA, URL_BANK_CARD_DATA_ID},
-            produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getBankCards(@Parameter(hidden = true) @SessionToken String token,
-                                          @PathVariable(name = "cardId", required = false) Long cardId) {
-        if (cardId != null) {
-            return ResponseEntity.ok(mockService.getApiBankCardById(token, cardId)
-                    .orElseThrow(() -> new CardNotFoundException(cardId)));
-        }
+    @ApiResponse(responseCode = "200", description = "Cards retrieved successfully (empty list if none)")
+    @GetMapping(value = URL_BANK_CARD_DATA, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<BankCardListResponse> getBankCards(@Parameter(hidden = true) @SessionToken String token) {
         return ResponseEntity.ok(mockService.getApiBankCards(token));
+    }
+
+    /**
+     * Retrieves a specific mocked bank card of the current session by its cardId.
+     *
+     * @param token  the authenticated session token
+     * @param cardId the unique identifier of the card
+     * @return the requested card
+     * @throws CardNotFoundException if the session mock holds no card with {@code cardId}
+     */
+    @Operation(
+            summary = "Get Bank Card By ID",
+            description = "Retrieves a single mocked card of the current session"
+    )
+    @ApiResponse(responseCode = "200", description = "Card retrieved successfully")
+    @ApiResponse(responseCode = "404", description = "Card with the specified ID not found")
+    @GetMapping(value = URL_BANK_CARD_DATA_ID, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<BankCardResponse> getBankCardById(@Parameter(hidden = true) @SessionToken String token,
+                                                            @PathVariable(name = "cardId") Long cardId) {
+        return ResponseEntity.ok(mockService.getApiBankCardById(token, cardId)
+                .orElseThrow(() -> new CardNotFoundException(cardId)));
     }
 }

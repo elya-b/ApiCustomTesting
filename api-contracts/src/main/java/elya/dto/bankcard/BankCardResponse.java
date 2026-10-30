@@ -59,8 +59,7 @@ public class BankCardResponse {
      */
     @Schema(
             description = "The category of the bank card",
-            example = "DEBIT",
-            allowableValues = {"DEBIT", "CREDIT"}
+            example = "debit"
     )
     @JsonProperty("cardType")
     @NotNull(message = "Card type is mandatory")
@@ -81,8 +80,7 @@ public class BankCardResponse {
      */
     @Schema(
             description = "Account currency code",
-            example = "USD",
-            allowableValues = {"USD", "EUR", "JPY"}
+            example = "USD"
     )
     @NotNull(message = "Currency is mandatory")
     @JsonProperty("currency")
