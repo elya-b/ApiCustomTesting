@@ -1,35 +1,25 @@
 package elya.emulator.repository;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import elya.emulator.objects.TokenRecord;
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.FAILED_LOAD_SESSION_FROM_FILE;
-import static elya.emulator.constants.logs.EmulatorErrorLogs.FAILED_SAVE_SESSION_TO_STORAGE;
-import static elya.emulator.constants.logs.EmulatorInfoLogs.LOADED_SESSIONS_FROM_STORAGE;
-
 /**
  * Repository for managing active emulator sessions.
- * Provides thread-safe in-memory storage with file-based persistence
- * to ensure session continuity across application restarts.
- * * <p>Designed to be decoupled from business logic to facilitate future migration
+ * <p>Keeps the sessions in a thread-safe in-memory map, which is the source of truth, and mirrors
+ * every change to a JSON file through {@link JsonSnapshotStore}, so sessions survive restarts.</p>
+ * <p>Designed to be decoupled from business logic to facilitate future migration
  * to external storage solutions like Redis.</p>
  */
-@Slf4j
 @Component
 public class SessionRepository {
-    private final String storagePath;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonSnapshotStore<TokenRecord> store;
 
     /**
      * Internal thread-safe storage for active sessions.
@@ -44,28 +34,19 @@ public class SessionRepository {
      * Initializes the repository with a configurable storage path.
      *
      * @param storagePath filesystem path to the JSON file where sessions are persisted.
-     * Defaults to 'session.json' if not explicitly configured.
+     *                    Defaults to 'session.json' if not explicitly configured.
      */
     public SessionRepository(@Value("${session.storage.path:session.json}") String storagePath) {
-        this.storagePath = storagePath;
+        this.store = new JsonSnapshotStore<>(Path.of(storagePath), TokenRecord.class);
     }
 
     /**
-     * Synchronizes the in-memory state with the file system upon application startup.
-     * If the persistence file exists, it is deserialized into the active sessions map.
+     * Loads the sessions saved by a previous run into memory.
+     * Starts empty if the storage file is missing or unreadable.
      */
     @PostConstruct
     public void init() {
-        File file = new File(storagePath);
-        if (file.exists()) {
-            try {
-                Map<String, TokenRecord> loaded = objectMapper.readValue(file, new TypeReference<>() {});
-                activeSessions.putAll(loaded);
-                log.info(LOADED_SESSIONS_FROM_STORAGE, activeSessions.size());
-            } catch (IOException e) {
-                log.error(FAILED_LOAD_SESSION_FROM_FILE, e);
-            }
-        }
+        activeSessions.putAll(store.load());
     }
 
     /**
@@ -76,7 +57,7 @@ public class SessionRepository {
      */
     public void save(String token, TokenRecord record) {
         activeSessions.put(token, record);
-        saveToFile();
+        store.save(activeSessions);
     }
 
     /**
@@ -96,24 +77,7 @@ public class SessionRepository {
      */
     public void delete(String token) {
         activeSessions.remove(token);
-        saveToFile();
-    }
-
-    /**
-     * Flushes the current in-memory session map to the JSON storage file.
-     * This method is synchronized to ensure atomic write operations and prevent data corruption.
-     */
-    private synchronized void saveToFile() {
-        try {
-            File file = new File(storagePath);
-            File parentDir = file.getParentFile();
-            if (parentDir != null) {
-                parentDir.mkdirs();
-            }
-            objectMapper.writeValue(file, activeSessions);
-        } catch (IOException e) {
-            log.error(FAILED_SAVE_SESSION_TO_STORAGE, e);
-        }
+        store.save(activeSessions);
     }
 
     /**
@@ -122,9 +86,6 @@ public class SessionRepository {
      */
     public void clear() {
         activeSessions.clear();
-        File file = new File(storagePath);
-        if (file.exists()) {
-            file.delete();
-        }
+        store.delete();
     }
 }
