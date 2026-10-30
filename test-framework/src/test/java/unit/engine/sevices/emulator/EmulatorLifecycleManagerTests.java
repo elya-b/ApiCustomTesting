@@ -29,6 +29,7 @@ import static org.mockito.Mockito.*;
  *   <li>{@code performLogin()} — throws IllegalStateException for invalid responses (parameterized: success=false or data=null)</li>
  *   <li>{@code waitUntilReady()} — succeeds when the emulator becomes ready on the second attempt</li>
  *   <li>{@code waitUntilReady()} — throws an exception after timeout when the service is unavailable</li>
+ *   <li>{@code stop()} — resets the URL and the auth token of the previous session</li>
  * </ul>
  */
 @ExtendWith(MockitoExtension.class)
@@ -124,6 +125,19 @@ public class EmulatorLifecycleManagerTests {
                 "Expected timeout message but got: " + exception.getMessage());
 
         verify(restTemplate, atLeastOnce()).getForEntity(anyString(), eq(String.class));
+    }
+
+    @Test
+    @DisplayName("stop() - Should reset URL and token when session was active")
+    void stop_ShouldResetUrlAndToken_WhenSessionWasActive() {
+        ReflectionTestUtils.setField(manager, "authToken", TOKEN);
+
+        manager.stop();
+
+        assertAll("Verify session state is reset",
+                () -> assertNull(manager.getUrl(), "URL should be reset after stop"),
+                () -> assertNull(manager.getAuthToken(), "Auth token should be reset after stop")
+        );
     }
 
     private JsonNode toJson(Object obj) {
