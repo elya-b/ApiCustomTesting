@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static elya.constants.ApiEndpoints.*;
-import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
 import static elya.emulator.constants.messages.ExceptionMessages.*;
 import static elya.emulator.constants.messages.ResponseMessages.*;
 import static elya.enums.responsemodel.AuthToken.*;

@@ -8,19 +8,17 @@ import elya.emulator.constants.formats.DataTransformer;
 import elya.emulator.exceptions.TokenValidationException;
 import elya.emulator.tokens.TokenProvider;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
 
 /**
  * Service responsible for user authentication and session token issuance.
  * Coordinates credential verification using a {@link PasswordEncoder}
  * and delegates token lifecycle management to the {@link TokenManagerService}.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService implements IAuthApi, DataTransformer {
@@ -44,7 +42,6 @@ public class AuthenticationService implements IAuthApi, DataTransformer {
     public AuthResponse generateAuthToken(AuthRequest request) {
         if (request == null ||
                 !StringUtils.hasText(request.getLogin()) || !StringUtils.hasText(request.getPassword())) {
-            log.error(INVALID_OR_MISSING_CREDENTIALS);
             throw new TokenValidationException(INVALID_OR_MISSING_CREDENTIALS);
         }
 
@@ -54,7 +51,6 @@ public class AuthenticationService implements IAuthApi, DataTransformer {
                         passwordEncoder.matches(request.getPassword(), cred.getPassword()));
 
         if (!credentialsMatch) {
-            log.error(INVALID_OR_MISSING_CREDENTIALS);
             throw new TokenValidationException(INVALID_OR_MISSING_CREDENTIALS);
         }
 

@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.stream.Stream;
 
-import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
+import static elya.constants.ApiEndpoints.*;
 import static elya.emulator.constants.messages.ExceptionMessages.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -28,8 +28,7 @@ import static org.junit.jupiter.api.Named.named;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpHeaders.*;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.http.MediaType.TEXT_PLAIN;
+import static org.springframework.http.MediaType.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -46,6 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>Bean validation failure — 400 with the field validation message</li>
  *   <li>Missing Authorization header — 401 with {@code WWW-Authenticate: Bearer}</li>
  *   <li>Unexpected exception — 500 without internal details</li>
+ *   <li>Error content type — {@code application/problem+json} even for a client that accepts {@code application/json}</li>
  * </ul>
  */
 @WebMvcTest(ApiEmulatorController.class)
@@ -190,6 +190,18 @@ public class GlobalExceptionHandlerTests {
                 .andExpect(jsonPath(STATUS_FIELD).value(HttpStatus.INTERNAL_SERVER_ERROR.value()))
                 .andExpect(jsonPath(DETAIL_FIELD).value(UNEXPECTED_INTERNAL_ERROR))
                 .andExpect(content().string(not(containsString(INTERNAL_DETAIL))));
+    }
+
+    @Test
+    @DisplayName("POST " + URL_BANK_CARD_DATA + " - Should answer a JSON client with application/problem+json")
+    void errorResponse_ShouldUseProblemJsonContentType_WhenClientAcceptsJson() throws Exception {
+        mockMvc.perform(post(URL_BANK_CARD_DATA)
+                        .header(AUTHORIZATION, FULL_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .accept(APPLICATION_JSON)
+                        .content(BROKEN_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(APPLICATION_PROBLEM_JSON));
     }
 
     private static Stream<Arguments> unreadableBodies() {

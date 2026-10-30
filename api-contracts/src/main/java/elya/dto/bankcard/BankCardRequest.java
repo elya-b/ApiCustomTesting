@@ -41,7 +41,7 @@ public class BankCardRequest {
     /**
      * The functional category of the card (e.g., DEBIT, CREDIT).
      */
-    @Schema(description = "Card category", example = "DEBIT")
+    @Schema(description = "Card category", example = "debit")
     @NotNull(message = "Card type is mandatory")
     private CardType cardType;
 

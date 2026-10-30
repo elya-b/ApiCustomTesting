@@ -62,4 +62,7 @@ public class ExceptionMessages {
      * <p>The argument is the requested card ID.</p>
      */
     public static final String CARD_NOT_FOUND = "Card with ID [%d] not found";
+
+    /** Error message for a login request with blank or unknown credentials. */
+    public static final String INVALID_OR_MISSING_CREDENTIALS = "Invalid or missing credentials.";
 }
