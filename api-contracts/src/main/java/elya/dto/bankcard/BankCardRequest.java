@@ -5,12 +5,13 @@ import elya.card.BankCard;
 import elya.card.constants.CardType;
 import elya.card.constants.Currency;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.validator.constraints.Range;
 
 import java.math.BigDecimal;
 
@@ -26,16 +27,23 @@ import java.math.BigDecimal;
 @Schema(description = "Request payload for defining a bank card mock instance")
 public class BankCardRequest {
 
+    /** Smallest 16-digit card number. */
+    private static final long CARD_NUMBER_MIN = 1_000_000_000_000_000L;
+
+    /** Largest 16-digit card number. */
+    private static final long CARD_NUMBER_MAX = 9_999_999_999_999_999L;
+
+    /** Validation message for a card number outside the 16-digit range. */
+    private static final String CARD_NUMBER_LENGTH_MESSAGE = "Card number must be 16 digits";
+
     /**
      * The unique 16-digit primary account number (PAN).
      * Validated to be within the range of standard 16-digit integers.
      */
     @Schema(description = "Card number", example = "4444333322221111")
     @NotNull(message = "Card number is mandatory")
-    @Range(
-            min = 1_000_000_000_000_000L,
-            max = 9_999_999_999_999_999L,
-            message = "Card number must be 16 digits")
+    @Min(value = CARD_NUMBER_MIN, message = CARD_NUMBER_LENGTH_MESSAGE)
+    @Max(value = CARD_NUMBER_MAX, message = CARD_NUMBER_LENGTH_MESSAGE)
     private Long cardNumber;
 
     /**
