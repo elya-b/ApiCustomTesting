@@ -22,8 +22,6 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Setter
-@Slf4j
 @Schema(description = "Information about a specific bank card stored in the system")
 public class BankCardResponse {
 
@@ -108,7 +106,8 @@ public class BankCardResponse {
 
     /**
      * Static factory method to create a response DTO from a domain model and an explicit ID.
-     * * @param domain the {@link BankCard} business entity.
+     *
+     * @param domain the {@link BankCard} business entity.
      * @param id     the unique identifier to be assigned in the response.
      * @return a mapped {@link BankCardResponse} instance.
      */
