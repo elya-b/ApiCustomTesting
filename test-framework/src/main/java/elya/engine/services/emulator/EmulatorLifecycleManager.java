@@ -43,7 +43,7 @@ public class EmulatorLifecycleManager {
 
     /**
      * The base URL of the running emulator instance (e.g., http://localhost:8080).
-     * Populated dynamically after the runner starts.
+     * Set by {@link #start(AuthRequest)} and reset to {@code null} by {@link #stop()}.
      */
     @Getter
     private String url;
@@ -51,6 +51,7 @@ public class EmulatorLifecycleManager {
     /**
      * The authentication token obtained during the startup sequence.
      * Used for subsequent authorized mock configurations.
+     * Reset to {@code null} by {@link #stop()}.
      */
     @Getter
     private String authToken;
@@ -116,17 +117,25 @@ public class EmulatorLifecycleManager {
     }
 
     /**
-     * Gracefully shuts down the emulator process.
+     * Gracefully shuts down the emulator process and forgets the session.
+     * <p>Clears the emulator repositories while the emulator is still running, then stops it.
+     * The URL and the auth token are reset and the process is stopped even if the cleanup fails,
+     * so a stopped manager never hands out the state of a previous run.</p>
      * Invoked automatically by the Spring container on shutdown.
      */
     @PreDestroy
     public void stop() {
-        if (runner.isRunning()) {
-            runner.getBean(SessionRepository.class).clear();
-            runner.getBean(MockRepository.class).clearAll();
+        try {
+            if (runner.isRunning()) {
+                runner.getBean(SessionRepository.class).clear();
+                runner.getBean(MockRepository.class).clearAll();
+            }
+        } finally {
+            this.url = null;
+            this.authToken = null;
+            runner.stop();
+            log.info("Emulator process terminated.");
         }
-        runner.stop();
-        log.info("Emulator process terminated.");
     }
 
     /**
