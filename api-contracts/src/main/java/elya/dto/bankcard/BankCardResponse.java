@@ -6,10 +6,8 @@ import elya.card.BankCard;
 import elya.card.constants.CardType;
 import elya.card.constants.Currency;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.validator.constraints.Range;
 
 import java.math.BigDecimal;
 
@@ -17,6 +15,8 @@ import java.math.BigDecimal;
  * Data Transfer Object representing the bank card details as returned by the API.
  * <p>Extends the basic card information with a unique system identifier (cardId).
  * This DTO is used to provide clients with the current state of mocked or real cards.</p>
+ * <p>Fields carry no Bean Validation: the server builds responses itself, so nothing validates them.
+ * {@code requiredMode} documents which fields are always present in the OpenAPI contract.</p>
  */
 @Data
 @NoArgsConstructor
@@ -32,25 +32,20 @@ public class BankCardResponse {
      */
     @Schema(
             description = "Unique identifier of the card record",
-            example = "1"
+            example = "1",
+            requiredMode = Schema.RequiredMode.REQUIRED
     )
-    @NotNull(message = "Card ID is mandatory")
     @JsonProperty("cardId")
     private Long cardId;
 
     /**
      * The 16-digit primary account number.
-     * Validated for standard financial format consistency.
      */
     @Schema(
             description = "16-digit card number",
-            example = "1234567812345678"
+            example = "1234567812345678",
+            requiredMode = Schema.RequiredMode.REQUIRED
     )
-    @NotNull
-    @Range(
-            min = 1_000_000_000_000_000L,
-            max = 9_999_999_999_999_999L,
-            message = "Card number must be 16 digits")
     @JsonProperty("cardNumber")
     private Long cardNumber;
 
@@ -59,10 +54,10 @@ public class BankCardResponse {
      */
     @Schema(
             description = "The category of the bank card",
-            example = "debit"
+            example = "debit",
+            requiredMode = Schema.RequiredMode.REQUIRED
     )
     @JsonProperty("cardType")
-    @NotNull(message = "Card type is mandatory")
     private CardType cardType;
 
     /**
@@ -80,9 +75,9 @@ public class BankCardResponse {
      */
     @Schema(
             description = "Account currency code",
-            example = "USD"
+            example = "USD",
+            requiredMode = Schema.RequiredMode.REQUIRED
     )
-    @NotNull(message = "Currency is mandatory")
     @JsonProperty("currency")
     private Currency currency;
 

@@ -38,6 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>Every operation — documents 500</li>
  *   <li>Every error response — an RFC 9457 problem detail ({@code application/problem+json})</li>
  *   <li>Enum fields — list their JSON values, and the example is one of them (parameterized)</li>
+ *   <li>Card response — the always present fields are required</li>
+ *   <li>Card request — the card number documents its 16-digit range</li>
  * </ul>
  */
 @SpringBootTest(classes = elya.ApiEmulator.class)
@@ -60,6 +62,9 @@ public class OpenApiContractTests {
     private static final Pattern ERROR_STATUS = Pattern.compile("[45]\\d{2}");
     private static final List<String> CARD_TYPE_VALUES = List.of("debit", "credit");
     private static final List<String> CURRENCY_VALUES = List.of("USD", "EUR", "JPY");
+    private static final List<String> RESPONSE_REQUIRED_FIELDS = List.of("cardId", "cardNumber", "cardType", "currency");
+    private static final long CARD_NUMBER_MIN = 1_000_000_000_000_000L;
+    private static final long CARD_NUMBER_MAX = 9_999_999_999_999_999L;
 
     @Test
     @DisplayName("POST " + URL_TOKEN + " - Should be documented as public")
@@ -129,16 +134,34 @@ public class OpenApiContractTests {
     @DisplayName("Enum fields - Should list the JSON values and use one of them as the example")
     void enumField_ShouldListJsonValuesAndValidExample(String schemaName, String fieldName,
                                                        List<String> expectedValues) throws Exception {
-        JsonNode field = apiDocs().path("components").path("schemas")
-                .path(schemaName).path("properties").path(fieldName);
-        List<String> values = new ArrayList<>();
-        field.path("enum").forEach(value -> values.add(value.asText()));
+        JsonNode field = schema(apiDocs(), schemaName).path("properties").path(fieldName);
+        List<String> values = texts(field.path("enum"));
         String example = field.path("example").asText();
 
         assertAll(schemaName + "." + fieldName + " must match its JSON contract",
                 () -> assertEquals(expectedValues, values, "Enum must list the JSON values"),
                 () -> assertTrue(values.contains(example),
                         "Example '" + example + "' must be one of " + values));
+    }
+
+    @Test
+    @DisplayName("BankCardResponse - Should mark the always present fields as required")
+    void bankCardResponse_ShouldMarkAlwaysPresentFieldsAsRequired() throws Exception {
+        List<String> requiredFields = texts(schema(apiDocs(), "BankCardResponse").path("required"));
+
+        assertThat(requiredFields)
+                .as("BankCardResponse required fields")
+                .containsExactlyInAnyOrderElementsOf(RESPONSE_REQUIRED_FIELDS);
+    }
+
+    @Test
+    @DisplayName("BankCardRequest.cardNumber - Should document the 16-digit range")
+    void bankCardRequestCardNumber_ShouldDocumentSixteenDigitRange() throws Exception {
+        JsonNode cardNumber = schema(apiDocs(), "BankCardRequest").path("properties").path("cardNumber");
+
+        assertAll("cardNumber must document the 16-digit range",
+                () -> assertEquals(CARD_NUMBER_MIN, cardNumber.path("minimum").asLong(), "minimum"),
+                () -> assertEquals(CARD_NUMBER_MAX, cardNumber.path("maximum").asLong(), "maximum"));
     }
 
     private static Stream<Arguments> enumFields() {
@@ -154,6 +177,16 @@ public class OpenApiContractTests {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(json);
+    }
+
+    private static JsonNode schema(JsonNode apiDocs, String schemaName) {
+        return apiDocs.path("components").path("schemas").path(schemaName);
+    }
+
+    private static List<String> texts(JsonNode array) {
+        List<String> texts = new ArrayList<>();
+        array.forEach(item -> texts.add(item.asText()));
+        return texts;
     }
 
     private static List<ApiOperation> operations(JsonNode apiDocs) {
