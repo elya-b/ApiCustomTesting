@@ -1,12 +1,11 @@
 package elya.restclient.http;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.*;
 import lombok.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-import static elya.constants.enums.StatusInfo.STATUS;
+import static elya.constants.enums.StatusInfo.*;
 
 /**
  * Universal container for HTTP responses within the REST client.

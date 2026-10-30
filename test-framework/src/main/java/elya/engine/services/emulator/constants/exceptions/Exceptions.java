@@ -1,6 +1,6 @@
 package elya.engine.services.emulator.constants.exceptions;
 
-import lombok.experimental.UtilityClass;
+import lombok.experimental.*;
 
 /**
  * Static dictionary for emulator lifecycle and infrastructure exceptions.

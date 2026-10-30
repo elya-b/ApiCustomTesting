@@ -1,15 +1,14 @@
 package emulator.services;
 
-import elya.ApiEmulatorAutoConfiguration;
-import elya.emulator.repository.SessionRepository;
-import elya.emulator.services.TokenManagerService;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import elya.*;
+import elya.emulator.repository.*;
+import elya.emulator.services.*;
+import org.junit.jupiter.api.*;
+import org.springframework.boot.autoconfigure.*;
+import org.springframework.boot.test.context.runner.*;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Wiring test: token settings from configuration must reach {@link TokenManagerService}.

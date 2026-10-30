@@ -1,29 +1,23 @@
 package restclient.api;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.dto.bankcard.BankCardListResponse;
-import elya.restclient.api.BankCardClient;
-import elya.restclient.exceptions.RestClientException;
-import elya.restclient.http.IRestClientApi;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import com.fasterxml.jackson.databind.*;
+import elya.dto.bankcard.*;
+import elya.restclient.api.*;
+import elya.restclient.exceptions.*;
+import elya.restclient.http.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.*;
+import org.mockito.*;
+import org.mockito.junit.jupiter.*;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static elya.constants.enums.HttpHeaderValues.BEARER;
-import static elya.enums.responsemodel.ApiBankCards.CARDS;
-import static elya.enums.responsemodel.ApiBankCards.RESPONSE;
+import static elya.constants.enums.HttpHeaderValues.*;
+import static elya.enums.responsemodel.ApiBankCards.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.mockito.Mockito.*;
+import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Unit tests (Mockito) for {@link BankCardClient}.

@@ -1,12 +1,10 @@
 package elya.restclient.api;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.experimental.UtilityClass;
+import com.fasterxml.jackson.core.type.*;
+import com.fasterxml.jackson.databind.*;
+import lombok.experimental.*;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * Utility class for JSON data processing using the Jackson library.

@@ -1,6 +1,6 @@
 package elya.engine.services.emulator.constants.logs;
 
-import lombok.experimental.UtilityClass;
+import lombok.experimental.*;
 
 /**
  * Static dictionary for emulator lifecycle informational logs.

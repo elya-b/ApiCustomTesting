@@ -1,9 +1,9 @@
 package elya.emulator.tokens;
 
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.*;
+import org.springframework.stereotype.*;
 
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Implementation of {@link TokenProvider} that generates simple UUID-based tokens.

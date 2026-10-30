@@ -1,15 +1,11 @@
 package dto.bankcard;
 
-import elya.dto.bankcard.BankCardListRequest;
-import elya.dto.bankcard.BankCardRequest;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import elya.dto.bankcard.*;
+import org.junit.jupiter.api.*;
 
-import java.util.List;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link elya.dto.bankcard.BankCardListRequest}.

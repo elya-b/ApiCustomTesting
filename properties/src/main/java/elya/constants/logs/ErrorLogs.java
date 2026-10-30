@@ -1,6 +1,6 @@
 package elya.constants.logs;
 
-import lombok.experimental.UtilityClass;
+import lombok.experimental.*;
 
 /**
  * Static dictionary for configuration and startup error logs.

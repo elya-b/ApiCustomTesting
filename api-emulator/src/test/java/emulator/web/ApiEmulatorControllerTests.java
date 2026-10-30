@@ -1,45 +1,34 @@
 package emulator.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import elya.ApiEmulator;
-import elya.card.constants.CardType;
+import com.fasterxml.jackson.databind.*;
+import elya.*;
 import elya.card.constants.Currency;
-import elya.dto.auth.AuthRequest;
-import elya.dto.auth.AuthResponse;
-import elya.dto.bankcard.BankCardListRequest;
-import elya.dto.bankcard.BankCardListResponse;
-import elya.dto.bankcard.BankCardRequest;
-import elya.dto.bankcard.BankCardResponse;
-import elya.emulator.exceptions.TokenValidationException;
-import elya.emulator.services.AuthenticationService;
-import elya.emulator.services.MockService;
-import elya.emulator.services.TokenManagerService;
-import elya.emulator.web.ApiEmulatorController;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import elya.card.constants.*;
+import elya.dto.auth.*;
+import elya.dto.bankcard.*;
+import elya.emulator.exceptions.*;
+import elya.emulator.services.*;
+import elya.emulator.web.*;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.*;
+import org.springframework.boot.test.autoconfigure.web.servlet.*;
+import org.springframework.test.context.*;
+import org.springframework.test.context.bean.override.mockito.*;
+import org.springframework.test.web.servlet.*;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static elya.constants.ApiEndpoints.*;
 import static elya.emulator.constants.messages.ExceptionMessages.*;
 import static elya.emulator.constants.messages.ResponseMessages.*;
 import static elya.enums.responsemodel.AuthToken.*;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.http.HttpHeaders.*;
 import static org.springframework.http.MediaType.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Unit tests (WebMvcTest) for {@link ApiEmulatorController}.

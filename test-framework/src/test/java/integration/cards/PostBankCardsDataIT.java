@@ -1,20 +1,18 @@
 package integration.cards;
 
-import elya.allure.Priority;
-import elya.allure.PriorityLevel;
-import elya.card.BankCard;
-import elya.card.constants.CardType;
+import elya.allure.*;
+import elya.card.*;
 import elya.card.constants.Currency;
-import elya.restclient.exceptions.ApiHttpStatusException;
-import integration.AbstractApiTest;
+import elya.card.constants.*;
+import elya.restclient.exceptions.*;
+import integration.*;
 import io.qameta.allure.*;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
-import java.math.BigDecimal;
-import java.util.List;
+import java.math.*;
+import java.util.*;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

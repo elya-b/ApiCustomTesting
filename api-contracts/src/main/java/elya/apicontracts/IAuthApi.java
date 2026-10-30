@@ -1,7 +1,6 @@
 package elya.apicontracts;
 
-import elya.dto.auth.AuthRequest;
-import elya.dto.auth.AuthResponse;
+import elya.dto.auth.*;
 
 /**
  * Contract for the authentication API.

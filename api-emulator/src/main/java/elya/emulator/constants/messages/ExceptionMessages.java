@@ -1,6 +1,6 @@
 package elya.emulator.constants.messages;
 
-import lombok.experimental.UtilityClass;
+import lombok.experimental.*;
 
 /**
  * Centralized dictionary of error messages used throughout the API Emulator.

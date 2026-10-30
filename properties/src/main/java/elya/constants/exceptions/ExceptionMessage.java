@@ -1,6 +1,6 @@
 package elya.constants.exceptions;
 
-import lombok.experimental.UtilityClass;
+import lombok.experimental.*;
 
 /**
  * Constants for critical exception messages related to the emulator's core logic.

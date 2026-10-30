@@ -1,11 +1,8 @@
 package elya.dto.auth;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.*;
+import io.swagger.v3.oas.annotations.media.*;
+import lombok.*;
 
 /**
  * Data Transfer Object containing the specific details of a generated authentication session.

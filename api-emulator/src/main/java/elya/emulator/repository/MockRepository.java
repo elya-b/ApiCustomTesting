@@ -1,25 +1,24 @@
 package elya.emulator.repository;
 
-import elya.dto.bankcard.BankCardListResponse;
-import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import elya.dto.bankcard.*;
+import elya.emulator.storage.*;
+import jakarta.annotation.*;
+import lombok.extern.slf4j.*;
+import org.springframework.stereotype.*;
 
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.*;
 
-import static elya.emulator.constants.logs.EmulatorErrorLogs.ERROR_DURING_MOCK_PERSISTENCE_FOR_TOKEN;
-import static elya.emulator.constants.logs.EmulatorInfoLogs.PERSISTING_MOCK_DATA_TO_STORAGE_FOR_TOKEN;
-import static elya.emulator.logging.SensitiveDataMasker.maskToken;
+import static elya.emulator.constants.logs.EmulatorErrorLogs.*;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
+import static elya.emulator.logging.SensitiveDataMasker.*;
 
 /**
  * Repository for managing persistent mock responses.
  * <p>Keeps the mocks in a thread-safe in-memory map, which is the source of truth, and mirrors
- * every change to a JSON file through {@link JsonSnapshotStore}, so the data survives restarts.</p>
+ * every change to a JSON file through {@link JsonSnapshotStore}. How long the file lives is set
+ * by its {@link elya.StorageRetention}.</p>
  */
 @Slf4j
 @Component
@@ -28,22 +27,28 @@ public class MockRepository {
     private final Map<String, BankCardListResponse> mockedResponses = new ConcurrentHashMap<>();
 
     /**
-     * Initializes the repository with a configurable storage path.
+     * Creates the repository on top of its file store.
      *
-     * @param storagePath path to the JSON file where mock data is persisted.
-     *                    Defaults to 'mock_response.json' if not provided via properties.
+     * @param store the JSON store of the mocks, configured by {@code api.emulator.storage.mocks.*}
      */
-    public MockRepository(@Value("${mock.storage.path:mock_response.json}") String storagePath) {
-        this.store = new JsonSnapshotStore<>(Path.of(storagePath), BankCardListResponse.class);
+    public MockRepository(JsonSnapshotStore<BankCardListResponse> store) {
+        this.store = store;
     }
 
     /**
-     * Loads the mocks saved by a previous run into memory.
-     * Starts empty if the storage file is missing or unreadable.
+     * Loads the mocks the store restores on startup (none with the default retention).
      */
     @PostConstruct
     public void init() {
-        mockedResponses.putAll(store.load());
+        mockedResponses.putAll(store.restore());
+    }
+
+    /**
+     * Releases the store on shutdown; with the default retention this deletes the file.
+     */
+    @PreDestroy
+    public void shutdown() {
+        store.release();
     }
 
     /**

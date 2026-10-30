@@ -1,10 +1,7 @@
 package elya.dto.auth;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.*;
+import lombok.*;
 
 /**
  * Data Transfer Object for authentication requests containing user credentials.

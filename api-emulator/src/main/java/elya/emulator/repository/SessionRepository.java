@@ -1,19 +1,18 @@
 package elya.emulator.repository;
 
-import elya.emulator.objects.TokenRecord;
-import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import elya.emulator.objects.*;
+import elya.emulator.storage.*;
+import jakarta.annotation.*;
+import org.springframework.stereotype.*;
 
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Repository for managing active emulator sessions.
  * <p>Keeps the sessions in a thread-safe in-memory map, which is the source of truth, and mirrors
- * every change to a JSON file through {@link JsonSnapshotStore}, so sessions survive restarts.</p>
+ * every change to a JSON file through {@link JsonSnapshotStore}. How long the file lives is set
+ * by its {@link elya.StorageRetention}: by default, tokens never outlive the emulator.</p>
  * <p>Designed to be decoupled from business logic to facilitate future migration
  * to external storage solutions like Redis.</p>
  */
@@ -31,22 +30,28 @@ public class SessionRepository {
     private final Map<String, TokenRecord> activeSessions = new ConcurrentHashMap<>();
 
     /**
-     * Initializes the repository with a configurable storage path.
+     * Creates the repository on top of its file store.
      *
-     * @param storagePath filesystem path to the JSON file where sessions are persisted.
-     *                    Defaults to 'session.json' if not explicitly configured.
+     * @param store the JSON store of the sessions, configured by {@code api.emulator.storage.sessions.*}
      */
-    public SessionRepository(@Value("${session.storage.path:session.json}") String storagePath) {
-        this.store = new JsonSnapshotStore<>(Path.of(storagePath), TokenRecord.class);
+    public SessionRepository(JsonSnapshotStore<TokenRecord> store) {
+        this.store = store;
     }
 
     /**
-     * Loads the sessions saved by a previous run into memory.
-     * Starts empty if the storage file is missing or unreadable.
+     * Loads the sessions the store restores on startup (none with the default retention).
      */
     @PostConstruct
     public void init() {
-        activeSessions.putAll(store.load());
+        activeSessions.putAll(store.restore());
+    }
+
+    /**
+     * Releases the store on shutdown; with the default retention this deletes the file.
+     */
+    @PreDestroy
+    public void shutdown() {
+        store.release();
     }
 
     /**

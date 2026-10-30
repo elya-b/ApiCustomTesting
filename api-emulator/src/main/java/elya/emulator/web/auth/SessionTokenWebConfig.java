@@ -1,16 +1,15 @@
 package elya.emulator.web.auth;
 
-import elya.emulator.services.TokenManagerService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Configuration;
+import elya.emulator.services.*;
+import lombok.*;
+import org.springframework.context.annotation.*;
 import org.springframework.lang.NonNull;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.method.support.*;
+import org.springframework.web.servlet.config.annotation.*;
 
-import java.util.List;
+import java.util.*;
 
-import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
+import static elya.constants.ApiEndpoints.*;
 
 /**
  * Wires session token authentication into Spring MVC.

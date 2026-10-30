@@ -1,16 +1,15 @@
 package elya.emulator.web.auth;
 
-import elya.emulator.exceptions.TokenValidationException;
-import elya.emulator.services.TokenManagerService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import elya.emulator.exceptions.*;
+import elya.emulator.services.*;
+import jakarta.servlet.http.*;
+import lombok.*;
 import org.springframework.lang.NonNull;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.*;
 
-import static elya.constants.enums.HttpHeaderValues.BEARER;
-import static elya.emulator.constants.messages.ExceptionMessages.INVALID_AUTHORIZATION_HEADER;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static elya.constants.enums.HttpHeaderValues.*;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
+import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Authenticates every request to a protected path before it reaches a controller.

@@ -1,23 +1,22 @@
 package emulator.repository;
 
-import elya.emulator.objects.TokenRecord;
-import elya.emulator.repository.SessionRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import elya.*;
+import elya.emulator.objects.*;
+import elya.emulator.repository.*;
+import elya.emulator.storage.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.*;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Optional;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 
 /**
  * Unit tests for {@link SessionRepository}.
+ * <p>The repository runs on a {@code PERSISTENT} store, so reloading from the file can be verified.</p>
  * <ul>
  *   <li>{@code save()} — persists the session and creates a file on disk</li>
  *   <li>{@code delete()} — removes the session and updates the file</li>
@@ -45,7 +44,7 @@ public class SessionRepositoryTests {
     @BeforeEach
     void setUp() {
         fullPath = tempDir.resolve("test_session_storage.json").toString();
-        repository = new SessionRepository(fullPath);
+        repository = newRepository();
     }
 
     @Test
@@ -99,7 +98,7 @@ public class SessionRepositoryTests {
         repository.save(TOKEN, record);
         assertTrue(new File(fullPath).exists(), "Baseline file should exist on disk");
 
-        SessionRepository repository2 = new SessionRepository(fullPath);
+        SessionRepository repository2 = newRepository();
         assertTrue(repository2.find(TOKEN).isEmpty(), "New repository should be empty before init");
 
         repository2.init();
@@ -115,7 +114,7 @@ public class SessionRepositoryTests {
         File file = new File(fullPath);
         Files.writeString(file.toPath(), "{ invalid_json: ... }");
 
-        SessionRepository corruptedRepo = new SessionRepository(fullPath);
+        SessionRepository corruptedRepo = newRepository();
         corruptedRepo.init();
 
         Optional<TokenRecord> loadedRecord = corruptedRepo.find(TOKEN);
@@ -173,10 +172,15 @@ public class SessionRepositoryTests {
         repository.delete(TOKEN);
 
         // Create a new repo pointing at the same file and call init()
-        SessionRepository freshRepo = new SessionRepository(fullPath);
+        SessionRepository freshRepo = newRepository();
         freshRepo.init();
 
         assertTrue(freshRepo.find(TOKEN).isEmpty(),
                 "Deleted session must not appear after re-loading from the updated file");
+    }
+
+    private SessionRepository newRepository() {
+        return new SessionRepository(new JsonSnapshotStore<>(
+                Path.of(fullPath), TokenRecord.class, StorageRetention.PERSISTENT));
     }
 }

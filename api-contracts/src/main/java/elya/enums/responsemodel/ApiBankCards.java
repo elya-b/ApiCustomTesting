@@ -1,7 +1,6 @@
 package elya.enums.responsemodel;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.*;
 
 /**
  * Enumeration of top-level JSON keys used in bank card API response structures.

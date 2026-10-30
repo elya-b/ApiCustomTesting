@@ -1,30 +1,22 @@
 package elya.emulator.web;
 
-import elya.emulator.web.auth.SessionToken;
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.media.Content;
-import io.swagger.v3.oas.models.media.IntegerSchema;
+import elya.emulator.web.auth.*;
+import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.media.MediaType;
-import io.swagger.v3.oas.models.media.ObjectSchema;
-import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.media.StringSchema;
-import io.swagger.v3.oas.models.responses.ApiResponse;
-import io.swagger.v3.oas.models.responses.ApiResponses;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.security.SecurityScheme;
-import org.springdoc.core.customizers.OperationCustomizer;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.method.HandlerMethod;
+import io.swagger.v3.oas.models.media.*;
+import io.swagger.v3.oas.models.responses.*;
+import io.swagger.v3.oas.models.security.*;
+import org.springdoc.core.customizers.*;
+import org.springframework.context.annotation.*;
+import org.springframework.http.*;
+import org.springframework.web.method.*;
 
-import java.util.Arrays;
-import java.util.regex.Pattern;
+import java.util.*;
+import java.util.regex.*;
 
-import static elya.constants.ApiEndpoints.URL_BANK_CARD_DATA;
-import static elya.emulator.constants.messages.ExceptionMessages.CARD_NOT_FOUND;
-import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
+import static elya.constants.ApiEndpoints.*;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
+import static org.springframework.http.MediaType.*;
 
 /**
  * OpenAPI (Swagger) documentation of the API Emulator.

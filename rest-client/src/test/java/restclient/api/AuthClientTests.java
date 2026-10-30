@@ -1,30 +1,23 @@
 package restclient.api;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import elya.dto.auth.AuthRequest;
-import elya.dto.auth.AuthResponse;
-import elya.restclient.api.AuthClient;
-import elya.restclient.exceptions.RestClientException;
-import elya.restclient.http.IRestClientApi;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.node.*;
+import elya.dto.auth.*;
+import elya.restclient.api.*;
+import elya.restclient.exceptions.*;
+import elya.restclient.http.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.*;
+import org.mockito.*;
+import org.mockito.junit.jupiter.*;
 
-import static elya.constants.ApiEndpoints.URL_TOKEN;
-import static elya.constants.enums.JsonProperty.LOGIN;
-import static elya.constants.enums.JsonProperty.PASSWORD;
-import static elya.enums.responsemodel.AuthToken.SUCCESS;
-import static elya.restclient.constants.messages.ExceptionMessages.GENERATE_TOKEN_EXCEPTION;
+import static elya.constants.ApiEndpoints.*;
+import static elya.constants.enums.JsonProperty.*;
+import static elya.enums.responsemodel.AuthToken.*;
+import static elya.restclient.constants.messages.ExceptionMessages.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests (Mockito) for {@link AuthClient}.

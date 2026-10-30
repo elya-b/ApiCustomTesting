@@ -1,9 +1,9 @@
 package elya.restclient.http;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import org.springframework.http.HttpMethod;
+import com.fasterxml.jackson.databind.*;
+import org.springframework.http.*;
 
-import java.util.Map;
+import java.util.*;
 
 /**
  * Interface defining the core execution logic for the REST infrastructure.

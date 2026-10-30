@@ -1,7 +1,7 @@
 package elya.emulator.exceptions;
 
-import lombok.Getter;
-import org.springframework.http.HttpStatus;
+import lombok.*;
+import org.springframework.http.*;
 
 /**
  * Base custom exception for the API Emulator application.

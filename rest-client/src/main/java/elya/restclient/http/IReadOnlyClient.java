@@ -1,8 +1,8 @@
 package elya.restclient.http;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.*;
 
-import java.util.Map;
+import java.util.*;
 
 /**
  * Interface defining read-only API operations.
