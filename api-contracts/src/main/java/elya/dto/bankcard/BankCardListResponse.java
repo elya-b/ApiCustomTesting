@@ -24,18 +24,21 @@ public class BankCardListResponse {
     private ResponseContainer response;
 
     /**
-     * Static factory method to create a response from a list of card DTOs.
-     * Ensures the internal collection is mutable and correctly calculates the total size.
+     * Creates a response from a list of card DTOs.
+     * <p>Keeps an unmodifiable copy of the cards: later changes to the source list do not reach
+     * the response, and the response cannot be changed through its getters. This makes an instance
+     * safe to share, e.g. as a constant empty response.</p>
      *
-     * @param cards the list of {@link BankCardResponse} objects.
+     * @param cards the list of {@link BankCardResponse} objects; {@code null} gives an empty response.
      * @return a fully initialized {@link BankCardListResponse}.
+     * @throws NullPointerException if the list contains a {@code null} card.
      */
     public static BankCardListResponse of(List<BankCardResponse> cards) {
-        List<BankCardResponse> mutableCards = (cards != null) ? new ArrayList<>(cards) : new ArrayList<>();
+        List<BankCardResponse> copy = (cards != null) ? List.copyOf(cards) : List.of();
         return BankCardListResponse.builder()
                 .response(ResponseContainer.builder()
-                        .size(mutableCards.size())
-                        .cards(mutableCards)
+                        .size(copy.size())
+                        .cards(copy)
                         .build())
                 .build();
     }
