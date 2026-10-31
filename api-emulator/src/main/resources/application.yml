@@ -1,23 +1,13 @@
 server:
   port: 8080
-  error:
-    include-message: always
-    include-stacktrace: always
-    include-binding-errors: never
 
 spring:
-  profiles:
-    active: ${SPRING_PROFILE:dev}
+  config:
+    # Users shared with the test framework
+    import: classpath:emulator-credentials.yml
 
 api:
   credentials:
-    users:
-      - login: "admin"
-        password: "admin"
-        role: "ADMIN"
-      - login: "qa"
-        password: "qa"
-        role: "QA"
     token:
       expiration: 1h
       issuer: ${TOKEN_ISSUER:api-emulator}

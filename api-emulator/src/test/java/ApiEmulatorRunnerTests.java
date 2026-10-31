@@ -1,4 +1,4 @@
-import elya.*;
+import elya.emulator.*;
 import elya.emulator.repository.*;
 import org.junit.jupiter.api.*;
 
@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 /**
- * Unit tests for {@link elya.ApiEmulatorRunner}.
+ * Unit tests for {@link ApiEmulatorRunner}.
  * <ul>
  *   <li>{@code start()} launches the application, sets port and context</li>
  *   <li>{@code start()} ignores a second call when the server is already running</li>

@@ -1,7 +1,7 @@
 package emulator.tokens;
 
 import com.fasterxml.jackson.databind.*;
-import elya.*;
+import elya.emulator.config.*;
 import elya.emulator.tokens.*;
 import org.junit.jupiter.api.*;
 

@@ -1,10 +1,9 @@
 package emulator.services;
 
-import elya.*;
+import elya.emulator.config.*;
 import elya.emulator.repository.*;
 import elya.emulator.services.*;
 import org.junit.jupiter.api.*;
-import org.springframework.boot.autoconfigure.*;
 import org.springframework.boot.test.context.runner.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -18,7 +17,7 @@ import static org.mockito.Mockito.*;
 class TokenPropertiesWiringTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(ApiEmulatorAutoConfiguration.class))
+            .withUserConfiguration(EmulatorConfig.class)
             .withBean(SessionRepository.class, () -> mock(SessionRepository.class))
             .withBean(TokenManagerService.class)
             .withPropertyValues(

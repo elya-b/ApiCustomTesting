@@ -1,6 +1,7 @@
 package elya.emulator.repository;
 
 import elya.dto.bankcard.*;
+import elya.emulator.config.*;
 import elya.emulator.storage.*;
 import jakarta.annotation.*;
 import lombok.extern.slf4j.*;
@@ -18,7 +19,7 @@ import static elya.emulator.logging.SensitiveDataMasker.*;
  * Repository for managing persistent mock responses.
  * <p>Keeps the mocks in a thread-safe in-memory map, which is the source of truth, and mirrors
  * every change to a JSON file through {@link JsonSnapshotStore}. How long the file lives is set
- * by its {@link elya.StorageRetention}.</p>
+ * by its {@link StorageRetention}.</p>
  */
 @Slf4j
 @Component

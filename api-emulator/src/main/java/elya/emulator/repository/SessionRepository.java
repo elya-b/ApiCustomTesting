@@ -1,5 +1,6 @@
 package elya.emulator.repository;
 
+import elya.emulator.config.*;
 import elya.emulator.objects.*;
 import elya.emulator.storage.*;
 import jakarta.annotation.*;
@@ -12,7 +13,7 @@ import java.util.concurrent.*;
  * Repository for managing active emulator sessions.
  * <p>Keeps the sessions in a thread-safe in-memory map, which is the source of truth, and mirrors
  * every change to a JSON file through {@link JsonSnapshotStore}. How long the file lives is set
- * by its {@link elya.StorageRetention}: by default, tokens never outlive the emulator.</p>
+ * by its {@link StorageRetention}: by default, tokens never outlive the emulator.</p>
  * <p>Designed to be decoupled from business logic to facilitate future migration
  * to external storage solutions like Redis.</p>
  */

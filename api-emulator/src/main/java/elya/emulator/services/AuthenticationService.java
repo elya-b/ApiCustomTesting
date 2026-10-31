@@ -1,9 +1,9 @@
 package elya.emulator.services;
 
 import elya.apicontracts.*;
-import elya.credentials.*;
 import elya.dto.auth.*;
 import elya.emulator.constants.formats.*;
+import elya.emulator.credentials.*;
 import elya.emulator.exceptions.*;
 import elya.emulator.tokens.*;
 import lombok.*;

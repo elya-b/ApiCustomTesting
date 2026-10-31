@@ -1,4 +1,4 @@
-package elya.constants;
+package elya.emulator.credentials;
 
 import lombok.*;
 

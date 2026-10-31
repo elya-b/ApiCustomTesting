@@ -1,6 +1,5 @@
-package elya.credentials;
+package elya.emulator.credentials;
 
-import elya.constants.*;
 import jakarta.annotation.*;
 import jakarta.validation.*;
 import jakarta.validation.constraints.*;
@@ -11,12 +10,12 @@ import org.springframework.validation.annotation.*;
 
 import java.util.*;
 
-import static elya.constants.logs.InfoLogs.*;
+import static elya.emulator.constants.logs.EmulatorInfoLogs.*;
 
 /**
  * Configuration mapping class for API Emulator security credentials.
- * <p>Binds properties prefixed with {@code api.credentials} from configuration files
- * (e.g., application.yml) directly into Java objects with automatic validation.</p>
+ * <p>Binds properties prefixed with {@code api.credentials} (users are declared in
+ * {@code emulator-credentials.yml}) directly into Java objects with automatic validation.</p>
  */
 @Slf4j
 @Getter
@@ -26,7 +25,8 @@ import static elya.constants.logs.InfoLogs.*;
 @ConfigurationProperties(prefix = "api.credentials")
 public class ApiEmulatorCredentialsStructure {
 
-    /** * List of authorized users.
+    /**
+     * List of authorized users.
      * Must contain at least one entry to ensure the emulator is not left unprotected.
      */
     @NotEmpty(message = "Config error: users list cannot be empty")

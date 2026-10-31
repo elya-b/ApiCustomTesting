@@ -1,4 +1,4 @@
-package elya;
+package elya.emulator.config;
 
 /**
  * How long the emulator keeps its stored data (sessions and mocks).

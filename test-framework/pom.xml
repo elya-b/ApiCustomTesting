@@ -80,11 +80,6 @@
             <groupId>elya</groupId>
             <artifactId>api-contracts</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>elya</groupId>
-            <artifactId>properties</artifactId>
-        </dependency>
     </dependencies>
 
     <build>

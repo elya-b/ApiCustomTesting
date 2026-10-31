@@ -1,6 +1,6 @@
 package emulator.repository;
 
-import elya.*;
+import elya.emulator.config.*;
 import elya.emulator.objects.*;
 import elya.emulator.repository.*;
 import elya.emulator.storage.*;

@@ -1,6 +1,6 @@
 package emulator.storage;
 
-import elya.*;
+import elya.emulator.config.*;
 import elya.emulator.objects.*;
 import elya.emulator.storage.*;
 import org.junit.jupiter.api.*;

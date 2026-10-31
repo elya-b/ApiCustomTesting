@@ -1,6 +1,6 @@
 package elya.emulator.tokens;
 
-import elya.*;
+import elya.emulator.config.*;
 import io.jsonwebtoken.*;
 import lombok.*;
 import org.springframework.stereotype.*;

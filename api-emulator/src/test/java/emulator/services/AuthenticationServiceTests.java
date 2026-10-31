@@ -1,7 +1,7 @@
 package emulator.services;
 
-import elya.credentials.*;
 import elya.dto.auth.*;
+import elya.emulator.credentials.*;
 import elya.emulator.exceptions.*;
 import elya.emulator.services.*;
 import elya.emulator.tokens.*;

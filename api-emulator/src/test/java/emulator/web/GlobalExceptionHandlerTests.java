@@ -1,6 +1,6 @@
 package emulator.web;
 
-import elya.*;
+import elya.emulator.*;
 import elya.emulator.services.*;
 import elya.emulator.web.*;
 import org.junit.jupiter.api.*;

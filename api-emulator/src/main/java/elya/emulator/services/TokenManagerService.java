@@ -1,6 +1,6 @@
 package elya.emulator.services;
 
-import elya.*;
+import elya.emulator.config.*;
 import elya.emulator.exceptions.*;
 import elya.emulator.objects.*;
 import elya.emulator.repository.*;
