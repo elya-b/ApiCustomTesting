@@ -8,8 +8,11 @@ spring:
 
 api:
   emulator:
+    # Each test starts the emulator with empty storage
     storage:
       sessions:
         path: target/test-data/session.json
+        retention: process
       mocks:
         path: target/test-data/mock_response.json
+        retention: process

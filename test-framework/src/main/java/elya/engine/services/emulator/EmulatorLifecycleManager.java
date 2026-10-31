@@ -6,7 +6,6 @@ import elya.card.*;
 import elya.dto.auth.*;
 import elya.dto.bankcard.*;
 import elya.emulator.*;
-import elya.emulator.repository.*;
 import elya.restclient.http.*;
 import jakarta.annotation.*;
 import lombok.*;
@@ -109,33 +108,21 @@ public class EmulatorLifecycleManager {
         }
         waitUntilReady(Duration.ofSeconds(30));
 
-        runner.getBean(SessionRepository.class).clear();
-        runner.getBean(MockRepository.class).clearAll();
-
         this.authToken = performLogin(authRequest);
         log.info("Emulator startup complete. Service is healthy and authenticated.");
     }
 
     /**
-     * Gracefully shuts down the emulator process and forgets the session.
-     * <p>Clears the emulator repositories while the emulator is still running, then stops it.
-     * The URL and the auth token are reset and the process is stopped even if the cleanup fails,
-     * so a stopped manager never hands out the state of a previous run.</p>
-     * Invoked automatically by the Spring container on shutdown.
+     * Shuts down the emulator process and forgets the session.
+     * <p>The URL and the auth token are reset first, so a stopped manager never hands out
+     * the state of a previous run. Invoked automatically by the Spring container on shutdown.</p>
      */
     @PreDestroy
     public void stop() {
-        try {
-            if (runner.isRunning()) {
-                runner.getBean(SessionRepository.class).clear();
-                runner.getBean(MockRepository.class).clearAll();
-            }
-        } finally {
-            this.url = null;
-            this.authToken = null;
-            runner.stop();
-            log.info("Emulator process terminated.");
-        }
+        this.url = null;
+        this.authToken = null;
+        runner.stop();
+        log.info("Emulator process terminated.");
     }
 
     /**
