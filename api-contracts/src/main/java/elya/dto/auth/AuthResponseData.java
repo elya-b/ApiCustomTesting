@@ -32,10 +32,10 @@ public class AuthResponseData {
     private String ttl;
 
     /**
-     * The exact date and time when the token becomes invalid.
-     * Expressed in ISO 8601 standard format (UTC).
+     * The moment the token becomes invalid, as an ISO-8601 UTC instant with second precision.
      */
-    @Schema(description = "Expiration timestamp in standard format", example = "2026-03-07T23:00:00Z")
+    @Schema(description = "Expiration moment as an ISO-8601 UTC instant", format = "date-time",
+            example = "2026-03-07T23:00:00Z")
     @JsonProperty("expires")
     private String expires;
 

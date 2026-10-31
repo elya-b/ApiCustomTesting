@@ -5,6 +5,11 @@ import elya.authentication.*;
 import io.swagger.v3.oas.annotations.media.*;
 import lombok.*;
 
+import java.time.*;
+import java.time.format.*;
+import java.time.temporal.*;
+import java.util.*;
+
 import static elya.enums.responsemodel.AuthToken.*;
 
 /**
@@ -42,7 +47,8 @@ public class AuthResponse {
 
     /**
      * Maps the response DTO to the internal {@link Token} domain model.
-     * * @return a domain {@link Token} object if data is present, otherwise {@code null}.
+     *
+     * @return a domain {@link Token} object if data is present, otherwise {@code null}.
      */
     public Token toDomain() {
         if (this.data == null) {
@@ -57,19 +63,23 @@ public class AuthResponse {
     }
 
     /**
-     * Static factory method to create a successful authentication response.
+     * Creates a successful authentication response.
+     * <p>Owns the wire format of the token fields: the lifetime is written in whole seconds and the
+     * expiry as an ISO-8601 UTC instant with second precision, e.g. {@code 2026-03-07T23:00:00Z}.</p>
      *
-     * @param token   the generated session token.
-     * @param ttl     time-to-live duration for the session.
-     * @param expires the expiration timestamp formatted as a string.
-     * @param issuer  the identifier of the token issuing authority.
+     * @param token      the generated session token.
+     * @param ttlSeconds the token lifetime in seconds.
+     * @param expiresAt  the moment the token expires.
+     * @param issuer     the identifier of the token issuing authority.
      * @return a pre-configured {@link AuthResponse} instance marked as successful.
+     * @throws NullPointerException if {@code expiresAt} is null.
      */
-    public static AuthResponse success(String token, String ttl, String expires, String issuer) {
+    public static AuthResponse success(String token, long ttlSeconds, Instant expiresAt, String issuer) {
+        Objects.requireNonNull(expiresAt, "expiresAt");
         AuthResponseData data = AuthResponseData.builder()
                 .token(token)
-                .ttl(ttl)
-                .expires(expires)
+                .ttl(String.valueOf(ttlSeconds))
+                .expires(DateTimeFormatter.ISO_INSTANT.format(expiresAt.truncatedTo(ChronoUnit.SECONDS)))
                 .issuer(issuer)
                 .build();
 

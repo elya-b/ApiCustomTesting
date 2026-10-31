@@ -16,6 +16,7 @@ import org.springframework.test.context.*;
 import org.springframework.test.context.bean.override.mockito.*;
 import org.springframework.test.web.servlet.*;
 
+import java.time.*;
 import java.util.*;
 
 import static elya.constants.ApiEndpoints.*;
@@ -274,7 +275,7 @@ public class ApiEmulatorControllerTests {
     @DisplayName("POST " + URL_TOKEN + " - Success")
     void generateAuthToken_ShouldReturnToken() throws Exception {
         when(authService.generateAuthToken(any(AuthRequest.class)))
-                .thenReturn(AuthResponse.success("jwt-token", "3600", null, "issuer"));
+                .thenReturn(AuthResponse.success("jwt-token", 3600, Instant.EPOCH, "issuer"));
 
         mockMvc.perform(post(URL_TOKEN)
                         .contentType(APPLICATION_JSON)

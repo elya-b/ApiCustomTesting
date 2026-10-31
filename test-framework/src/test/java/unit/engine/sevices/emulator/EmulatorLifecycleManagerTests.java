@@ -56,7 +56,7 @@ public class EmulatorLifecycleManagerTests {
     @Test
     @DisplayName("performLogin() - Should return token when response is valid")
     void performLogin_ShouldSetToken_WhenResponseIsValid() {
-        var authResponse = AuthResponse.success(TOKEN, "3600", null, "issuer");
+        var authResponse = AuthResponse.success(TOKEN, 3600, Instant.EPOCH, "issuer");
 
         when(restClient.post(anyString(), any(), anyMap())).thenReturn(toJson(authResponse));
 

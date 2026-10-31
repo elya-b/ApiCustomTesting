@@ -31,7 +31,7 @@ import static org.mockito.Mockito.*;
  *   <li>Failure when the users list in configuration is empty</li>
  *   <li>Failure when the authentication request object is null</li>
  *   <li>Successful authentication with multiple users in config — only the matching user authorizes</li>
- *   <li>Response contains a non-null expires field</li>
+ *   <li>Expires is the session expiry written as an ISO-8601 UTC instant</li>
  * </ul>
  */
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +51,8 @@ public class AuthenticationServiceTests {
     private static final String LOGIN = "login";
     private static final String PASSWORD = "password";
     private static final AuthRequest AUTH_REQUEST = new AuthRequest(LOGIN, PASSWORD);
+    private static final long SESSION_EXPIRY_MILLIS = 1741644000000L;
+    private static final String SESSION_EXPIRY_ISO = "2025-03-10T22:00:00Z";
 
     // --- SUCCESSFUL AUTHENTICATION ---
 
@@ -74,7 +76,7 @@ public class AuthenticationServiceTests {
         when(tokenProvider.generateToken(AUTH_REQUEST.getLogin())).thenReturn(generatedToken);
         when(tokenManagerService.getExpirationSeconds()).thenReturn(3600L);
         when(tokenManagerService.getIssuer()).thenReturn(issuer);
-        when(tokenManagerService.saveSession(AUTH_REQUEST.getLogin(), generatedToken)).thenReturn(1741644000000L);
+        when(tokenManagerService.saveSession(AUTH_REQUEST.getLogin(), generatedToken)).thenReturn(SESSION_EXPIRY_MILLIS);
 
         AuthResponse response = authService.generateAuthToken(AUTH_REQUEST);
 
@@ -209,7 +211,7 @@ public class AuthenticationServiceTests {
         when(tokenProvider.generateToken(LOGIN)).thenReturn("mock-token");
         when(tokenManagerService.getExpirationSeconds()).thenReturn(3600L);
         when(tokenManagerService.getIssuer()).thenReturn("api-emulator");
-        when(tokenManagerService.saveSession(LOGIN, "mock-token")).thenReturn(1741644000000L);
+        when(tokenManagerService.saveSession(LOGIN, "mock-token")).thenReturn(SESSION_EXPIRY_MILLIS);
 
         AuthResponse response = authService.generateAuthToken(AUTH_REQUEST);
 
@@ -218,8 +220,8 @@ public class AuthenticationServiceTests {
     }
 
     @Test
-    @DisplayName("Successful. Response contains non-null expires field")
-    void generateAuthToken_ResponseContainsNonNullExpires() {
+    @DisplayName("Successful. Expires is the session expiry as an ISO-8601 UTC instant")
+    void generateAuthToken_ExpiresIsSessionExpiryInIsoUtc() {
         String encodedPassword = "encoded_password";
 
         ApiEmulatorCredentialsStructure.Credential user = new ApiEmulatorCredentialsStructure.Credential();
@@ -234,11 +236,11 @@ public class AuthenticationServiceTests {
         when(tokenProvider.generateToken(LOGIN)).thenReturn("mock-token");
         when(tokenManagerService.getExpirationSeconds()).thenReturn(3600L);
         when(tokenManagerService.getIssuer()).thenReturn("api-emulator");
-        when(tokenManagerService.saveSession(LOGIN, "mock-token")).thenReturn(1741644000000L);
+        when(tokenManagerService.saveSession(LOGIN, "mock-token")).thenReturn(SESSION_EXPIRY_MILLIS);
 
         AuthResponse response = authService.generateAuthToken(AUTH_REQUEST);
 
-        assertNotNull(response.getData().getExpires(),
-                "Expires field must be populated from saveSession return value");
+        assertEquals(SESSION_EXPIRY_ISO, response.getData().getExpires(),
+                "Expires must be the saveSession expiry written as an ISO-8601 UTC instant");
     }
 }
