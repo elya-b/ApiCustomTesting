@@ -2,7 +2,6 @@ package elya.emulator.services;
 
 import elya.apicontracts.*;
 import elya.dto.auth.*;
-import elya.emulator.constants.formats.*;
 import elya.emulator.credentials.*;
 import elya.emulator.exceptions.*;
 import elya.emulator.tokens.*;
@@ -10,6 +9,8 @@ import lombok.*;
 import org.springframework.security.crypto.password.*;
 import org.springframework.stereotype.*;
 import org.springframework.util.*;
+
+import java.time.*;
 
 import static elya.emulator.constants.messages.ExceptionMessages.*;
 
@@ -20,7 +21,8 @@ import static elya.emulator.constants.messages.ExceptionMessages.*;
  */
 @Service
 @RequiredArgsConstructor
-public class AuthenticationService implements IAuthApi, DataTransformer {
+public class AuthenticationService implements IAuthApi {
+
     private final TokenManagerService tokenManagerService;
     private final ApiEmulatorCredentialsService credentialsService;
     private final TokenProvider tokenProvider;
@@ -54,10 +56,9 @@ public class AuthenticationService implements IAuthApi, DataTransformer {
         }
 
         String authToken = tokenProvider.generateToken(request.getLogin());
-        String ttl = asString(tokenManagerService.getExpirationSeconds());
-        String expires = formatToStandard(tokenManagerService.saveSession(request.getLogin(), authToken));
-        String issuer = tokenManagerService.getIssuer();
+        long expiresAtMillis = tokenManagerService.saveSession(request.getLogin(), authToken);
 
-        return AuthResponse.success(authToken, ttl, expires, issuer);
+        return AuthResponse.success(authToken, tokenManagerService.getExpirationSeconds(),
+                Instant.ofEpochMilli(expiresAtMillis), tokenManagerService.getIssuer());
     }
 }

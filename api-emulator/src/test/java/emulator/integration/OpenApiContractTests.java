@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>Enum fields — list their JSON values, and the example is one of them (parameterized)</li>
  *   <li>Card response — the always present fields are required</li>
  *   <li>Card request — the card number documents its 16-digit range</li>
+ *   <li>Token response — expires is documented as an ISO-8601 date-time with a valid example</li>
  * </ul>
  */
 @SpringBootTest(classes = ApiEmulator.class)
@@ -61,6 +62,7 @@ public class OpenApiContractTests {
     private static final List<String> RESPONSE_REQUIRED_FIELDS = List.of("cardId", "cardNumber", "cardType", "currency");
     private static final long CARD_NUMBER_MIN = 1_000_000_000_000_000L;
     private static final long CARD_NUMBER_MAX = 9_999_999_999_999_999L;
+    private static final String DATE_TIME_FORMAT = "date-time";
 
     @Test
     @DisplayName("POST " + URL_TOKEN + " - Should be documented as public")
@@ -158,6 +160,17 @@ public class OpenApiContractTests {
         assertAll("cardNumber must document the 16-digit range",
                 () -> assertEquals(CARD_NUMBER_MIN, cardNumber.path("minimum").asLong(), "minimum"),
                 () -> assertEquals(CARD_NUMBER_MAX, cardNumber.path("maximum").asLong(), "maximum"));
+    }
+
+    @Test
+    @DisplayName("AuthResponseData.expires - Should be documented as an ISO-8601 date-time")
+    void authResponseExpires_ShouldBeDocumentedAsDateTime() throws Exception {
+        JsonNode expires = schema(apiDocs(), "AuthResponseData").path("properties").path("expires");
+
+        assertAll("expires must document its ISO-8601 format",
+                () -> assertEquals(DATE_TIME_FORMAT, expires.path("format").asText(), "format"),
+                () -> assertDoesNotThrow(() -> java.time.Instant.parse(expires.path("example").asText()),
+                        "The example must be a valid ISO-8601 instant"));
     }
 
     private static Stream<Arguments> enumFields() {

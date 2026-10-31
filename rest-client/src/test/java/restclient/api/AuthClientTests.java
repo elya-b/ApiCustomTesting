@@ -11,6 +11,8 @@ import org.junit.jupiter.api.extension.*;
 import org.mockito.*;
 import org.mockito.junit.jupiter.*;
 
+import java.time.*;
+
 import static elya.constants.ApiEndpoints.*;
 import static elya.constants.enums.JsonProperty.*;
 import static elya.enums.responsemodel.AuthToken.*;
@@ -44,7 +46,7 @@ public class AuthClientTests {
     @DisplayName("generateAuthToken() - Should return AuthResponse when credentials are valid")
     void generateAuthToken_ShouldReturnResponse_WhenCredentialsAreValid() {
 
-        var authResponse = AuthResponse.success("token", "3600", null, "issuer");
+        var authResponse = AuthResponse.success("token", 3600, Instant.EPOCH, "issuer");
 
         when(clientApi.post(anyString(), any(), anyMap())).thenReturn(toJson(authResponse));
 

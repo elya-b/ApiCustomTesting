@@ -9,6 +9,9 @@ import integration.*;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.*;
 
+import java.time.*;
+import java.time.temporal.*;
+
 import static elya.constants.ApiEndpoints.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @Epic("Authentication API")
 @Feature("POST /token — Generate Auth Token")
 public class PostTokenIT extends AbstractApiTest {
+
+    /** ISO-8601 UTC instant with second precision, e.g. {@code 2026-03-07T23:00:00Z}. */
+    private static final String ISO_INSTANT_SECONDS = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z";
 
     @Test
     @Story("Successful token generation")
@@ -74,6 +80,32 @@ public class PostTokenIT extends AbstractApiTest {
                         () -> assertNotNull(token.getIssuer(),  "Issuer must not be null")
                 )
         );
+    }
+
+    @Test
+    @Story("Successful token generation")
+    @Severity(SeverityLevel.NORMAL)
+    @Priority(PriorityLevel.HIGH)
+    @DisplayName("POST " + URL_TOKEN + " - Should return expires as an ISO-8601 UTC instant, TTL seconds after issue")
+    void POST_Token_ShouldReturnExpiresInIsoUtc_WhenCredentialsAreValid() {
+        AuthRequest authRequest = prepareLoginRequest(Role.QA);
+
+        Instant issuedNotBefore = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        Token token = clientApi.generateAuthToken(authRequest);
+        Instant issuedNotAfter = Instant.now();
+        attachJson("Token response", token);
+
+        verify("Expires must be an ISO-8601 UTC instant, TTL seconds after the token was issued", () -> {
+            assertTrue(token.getExpires().matches(ISO_INSTANT_SECONDS),
+                    "Expires must look like 2026-03-07T23:00:00Z, got: " + token.getExpires());
+            Instant expires = Instant.parse(token.getExpires());
+            long ttlSeconds = Long.parseLong(token.getTtl());
+            assertAll("Expires must fall within the request window plus TTL",
+                    () -> assertFalse(expires.isBefore(issuedNotBefore.plusSeconds(ttlSeconds)),
+                            "Expires is earlier than issue time + TTL: " + expires),
+                    () -> assertFalse(expires.isAfter(issuedNotAfter.plusSeconds(ttlSeconds)),
+                            "Expires is later than issue time + TTL: " + expires));
+        });
     }
 
     @Test
