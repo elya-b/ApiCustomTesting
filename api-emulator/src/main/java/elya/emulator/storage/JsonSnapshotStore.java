@@ -1,7 +1,7 @@
 package elya.emulator.storage;
 
 import com.fasterxml.jackson.databind.*;
-import elya.*;
+import elya.emulator.config.*;
 import lombok.extern.slf4j.*;
 
 import java.io.*;

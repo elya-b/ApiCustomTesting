@@ -1,6 +1,6 @@
-package elya;
+package elya.emulator.config;
 
-import elya.constants.exceptions.*;
+import elya.emulator.exceptions.*;
 import org.springframework.boot.context.properties.*;
 import org.springframework.boot.context.properties.bind.*;
 import org.springframework.boot.convert.*;
@@ -8,7 +8,7 @@ import org.springframework.boot.convert.*;
 import java.time.*;
 import java.time.temporal.*;
 
-import static elya.constants.exceptions.ExceptionMessage.*;
+import static elya.emulator.constants.messages.ExceptionMessages.*;
 
 /**
  * Token settings bound from {@code api.credentials.token.*}.

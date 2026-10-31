@@ -1,7 +1,7 @@
 package emulator.integration;
 
-import elya.*;
 import elya.dto.bankcard.*;
+import elya.emulator.config.*;
 import elya.emulator.objects.*;
 import elya.emulator.repository.*;
 import elya.emulator.storage.*;
@@ -41,7 +41,7 @@ public class StorageIntegrationTests {
 
     /**
      * Binds only {@link EmulatorStorageProperties}: storage needs no credentials or token settings,
-     * so the tests do not load {@link elya.ApiEmulatorAutoConfiguration} and its unrelated required properties.
+     * so the tests do not load {@link EmulatorConfig} and its unrelated required properties.
      */
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(EmulatorStorageProperties.class)

@@ -19,6 +19,9 @@ public class EmulatorInfoLogs {
     /** Logged when a mock response configuration is removed for a specific session. */
     public static final String CLEARING_MOCK_RESPONSE_FOR_TOKEN = "Clearing mock response for token: [{}]";
 
+    /** Logged after the users are bound from configuration: user count. */
+    public static final String CONFIG_LOADED_SUCCESSFULLY = "API Emulator Configuration: Successfully loaded {} users.";
+
     /** Logged on application startup once the server is ready to accept requests. */
     public static final String EMULATOR_STARTED_ON_PORT_SUCCESSFULLY = "API Emulator has started successfully on the configured port.";
 

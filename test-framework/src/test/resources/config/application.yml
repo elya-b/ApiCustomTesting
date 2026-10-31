@@ -1,0 +1,15 @@
+# Test framework configuration.
+# Spring Boot reads classpath:/config/application.yml on top of classpath:/application.yml,
+# so these values apply to the test context and to the emulator started in-process.
+spring:
+  config:
+    # Shared users the tests log in with; the emulator imports the same file
+    import: classpath:emulator-credentials.yml
+
+api:
+  emulator:
+    storage:
+      sessions:
+        path: target/test-data/session.json
+      mocks:
+        path: target/test-data/mock_response.json

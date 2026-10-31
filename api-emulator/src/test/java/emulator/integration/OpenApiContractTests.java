@@ -1,6 +1,7 @@
 package emulator.integration;
 
 import com.fasterxml.jackson.databind.*;
+import elya.emulator.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.*;
 import org.junit.jupiter.params.provider.*;
@@ -37,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>Card request — the card number documents its 16-digit range</li>
  * </ul>
  */
-@SpringBootTest(classes = elya.ApiEmulator.class)
+@SpringBootTest(classes = ApiEmulator.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class OpenApiContractTests {

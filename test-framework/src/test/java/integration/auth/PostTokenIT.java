@@ -2,8 +2,8 @@ package integration.auth;
 
 import elya.allure.*;
 import elya.authentication.*;
-import elya.constants.*;
 import elya.dto.auth.*;
+import elya.emulator.credentials.*;
 import elya.restclient.exceptions.*;
 import integration.*;
 import io.qameta.allure.*;

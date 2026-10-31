@@ -65,4 +65,12 @@ public class ExceptionMessages {
 
     /** Error message for a login request with blank or unknown credentials. */
     public static final String INVALID_OR_MISSING_CREDENTIALS = "Invalid or missing credentials.";
+
+    /** Error message template for a token lifetime that is missing, zero or negative; the argument is the configured value. */
+    public static final String TOKEN_EXPIRATION_MUST_BE_POSITIVE =
+            "Config error: api.credentials.token.expiration must be a positive duration, but was: %s";
+
+    /** Error message for a token issuer that is missing or blank. */
+    public static final String TOKEN_ISSUER_MUST_NOT_BE_BLANK =
+            "Config error: api.credentials.token.issuer must not be blank";
 }

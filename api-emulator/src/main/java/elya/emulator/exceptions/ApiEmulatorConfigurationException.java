@@ -1,4 +1,4 @@
-package elya.constants.exceptions;
+package elya.emulator.exceptions;
 
 /**
  * Exception thrown when a critical configuration error is detected during startup.

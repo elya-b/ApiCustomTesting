@@ -1,4 +1,4 @@
-package elya;
+package elya.emulator.config;
 
 import org.springframework.boot.context.properties.*;
 import org.springframework.boot.context.properties.bind.*;

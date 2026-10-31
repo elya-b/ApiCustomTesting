@@ -6,6 +6,7 @@ import elya.card.constants.*;
 import elya.constants.*;
 import elya.dto.auth.*;
 import elya.dto.bankcard.*;
+import elya.emulator.*;
 import elya.emulator.repository.*;
 import elya.emulator.services.*;
 import org.junit.jupiter.api.*;
@@ -30,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.http.HttpHeaders.*;
 
 /**
- * Integration tests for {@link elya.ApiEmulator} (full Spring context).
+ * Integration tests for {@link ApiEmulator} (full Spring context).
  * <ul>
  *   <li>{@code setMockResponse()} — new cards are appended to the existing list (APPEND logic)</li>
  *   <li>{@code setMockResponse()} — cardId is incremented based on the current maximum</li>
@@ -48,7 +49,7 @@ import static org.springframework.http.HttpHeaders.*;
  *   <li>{@code clearMockResponse()} — returns 401 and keeps the mocks of an expired session (regression)</li>
  * </ul>
  */
-@SpringBootTest(classes = elya.ApiEmulator.class) // Starts the full Spring application context for the test
+@SpringBootTest(classes = ApiEmulator.class) // Starts the full Spring application context for the test
 @AutoConfigureMockMvc // Sets up the MockMvc instance to simulate HTTP requests
 @ActiveProfiles("test") // Tells Spring to use 'application-test.yml' configuration
 public class ApiEmulatorIntegrationTests {

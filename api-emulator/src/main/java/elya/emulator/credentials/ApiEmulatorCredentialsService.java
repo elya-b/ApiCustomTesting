@@ -1,4 +1,4 @@
-package elya.credentials;
+package elya.emulator.credentials;
 
 import lombok.*;
 import org.springframework.stereotype.*;
