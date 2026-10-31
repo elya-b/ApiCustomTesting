@@ -1,6 +1,7 @@
 package elya.restclient.http;
 
 import com.fasterxml.jackson.databind.*;
+import elya.restclient.exceptions.*;
 
 import java.util.*;
 
@@ -17,7 +18,10 @@ public interface IWriteClient {
      * @param urlPath  the target endpoint path or a fully qualified URL.
      * @param jsonBody the {@link JsonNode} payload to be sent in the request body.
      * @param headers  a map containing HTTP headers (e.g., Content-Type, Authorization).
-     * @return the response body parsed as a {@link JsonNode}.
+     * @return the response body parsed as a {@link JsonNode}; an empty object for an empty body.
+     * @throws ApiHttpStatusException if the server answered with a non-2xx status.
+     * @throws ApiTransportException  if no HTTP response was received.
+     * @throws RestClientException    if the body of a successful response is not valid JSON.
      */
     JsonNode post(String urlPath, JsonNode jsonBody, Map<String, String> headers);
 }

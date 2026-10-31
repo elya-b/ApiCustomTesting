@@ -1,59 +1,32 @@
 package elya.restclient.http;
 
-import com.fasterxml.jackson.databind.*;
-import lombok.*;
-
 import java.util.*;
 
-import static elya.constants.enums.StatusInfo.*;
-
 /**
- * Universal container for HTTP responses within the REST client.
- * <p>Wraps raw response data, parsed JSON structures, HTTP headers, and
- * status information into a single object for easy processing across
- * different service layers.</p>
+ * An HTTP response exactly as the server sent it: status code, raw body and headers.
+ * <p>Created only for a response that was actually received, so the status code is always
+ * the real one, including codes outside the standard set (e.g. 520). A request that got no
+ * response fails with {@link elya.restclient.exceptions.ApiTransportException} instead.</p>
+ *
+ * @param statusCode the HTTP status code
+ * @param body       the raw response body, possibly empty
+ * @param headers    the response headers; the values of a repeated header are joined with {@code "; "}
  */
-@NoArgsConstructor
-@AllArgsConstructor
-@Getter
-@Setter
-@EqualsAndHashCode
-@ToString
-public class RestClientApiResponse {
-
-    /** Map containing status-related information, such as HTTP codes. */
-    private Map<String, Object> statuses;
-
-    /** The raw response body as a string. */
-    private String responseAsString;
-
-    /** The response body parsed into a Jackson {@link JsonNode} for easy traversal. */
-    private JsonNode responseAsJson;
-
-    /** HTTP headers received from the server. */
-    private Map<String, String> headers = new HashMap<>();
+public record RestClientApiResponse(int statusCode, String body, Map<String, String> headers) {
 
     /**
-     * Extracts the HTTP status code from the status metadata.
-     *
-     * @return the status code, or {@code -1} if the response carries no usable status.
+     * Makes the headers unmodifiable, so the response cannot change after it was received.
      */
-    public int getStatusCode() {
-        if (statuses != null && statuses.get(STATUS.toString()) instanceof Number codeObj) {
-            return codeObj.intValue();
-        }
-        return -1;
+    public RestClientApiResponse {
+        headers = Map.copyOf(headers);
     }
 
     /**
      * Determines if the request was successful based on the HTTP status code.
-     * <p>A request is considered successful if the status code is within
-     * the 200-299 range.</p>
      *
-     * @return {@code true} if the status code indicates success; {@code false} otherwise.
+     * @return {@code true} if the status code is within the 200-299 range; {@code false} otherwise.
      */
     public boolean isSuccessful() {
-        int code = getStatusCode();
-        return code >= 200 && code < 300;
+        return statusCode >= 200 && statusCode < 300;
     }
 }

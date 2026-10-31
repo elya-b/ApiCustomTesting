@@ -1,7 +1,7 @@
 package elya.restclient.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
-import elya.*;
 import elya.restclient.exceptions.*;
 import lombok.*;
 import lombok.extern.slf4j.*;
@@ -22,29 +22,29 @@ import static org.springframework.http.HttpHeaders.*;
 
 /**
  * Core engine for executing HTTP requests using Java's native {@link HttpClient}.
- * <p>Handles the entire request lifecycle: URI construction, header mapping,
- * payload serialization, and comprehensive response processing including
- * status metadata generation.</p>
+ * <p>Keeps three kinds of failure apart, so a caller always knows which one happened:</p>
+ * <ul>
+ *   <li>no response was received — {@link ApiTransportException};</li>
+ *   <li>the server answered with a non-2xx status — {@link ApiHttpStatusException};</li>
+ *   <li>a successful response body is not valid JSON — {@link RestClientException}.</li>
+ * </ul>
  */
 @Slf4j
 public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine {
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final ApiEmulatorHttpStatusInfoGenerator statusGenerator;
 
     @Setter
     private String baseUrl;
 
     /**
-     * Initializes the engine with default timeouts and status generation logic.
+     * Initializes the engine with default timeouts.
      *
-     * @param baseUrl         the target API root address.
-     * @param statusGenerator service to enrich responses with descriptive HTTP metadata.
+     * @param baseUrl the target API root address.
      */
-    public RestClientApiEngine(String baseUrl, ApiEmulatorHttpStatusInfoGenerator statusGenerator) {
+    public RestClientApiEngine(String baseUrl) {
         this.baseUrl = baseUrl;
-        this.statusGenerator = statusGenerator;
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(10))
@@ -58,7 +58,8 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
      * @param urlPath  the target endpoint (relative or absolute).
      * @param jsonBody optional JSON payload.
      * @param headers  custom HTTP headers.
-     * @return a populated {@link RestClientApiResponse}.
+     * @return the response exactly as the server sent it, whatever its status.
+     * @throws ApiTransportException if no HTTP response was received.
      */
     @Override
     public RestClientApiResponse sendRequest(HttpMethod method,
@@ -108,18 +109,25 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
     }
 
     /**
-     * Extracts the JSON tree from a successful response.
+     * Parses the body of a successful response as JSON.
      *
      * @param response the raw client response.
      * @return the parsed body, or an empty object node when the body was empty.
      * @throws ApiHttpStatusException if the server answered with a non-2xx status.
-     * @throws RestClientException    if the response carries no usable HTTP status.
+     * @throws RestClientException    if the body of a successful response is not valid JSON.
      */
     private JsonNode handleJsonResponse(RestClientApiResponse response) {
         ensureSuccessful(response);
 
-        JsonNode root = response.getResponseAsJson();
-        return root != null ? root : objectMapper.createObjectNode();
+        String body = response.body();
+        if (body == null || body.isBlank()) {
+            return objectMapper.createObjectNode();
+        }
+        try {
+            return objectMapper.readTree(body);
+        } catch (JsonProcessingException e) {
+            throw new RestClientException(RESPONSE_NOT_JSON, e);
+        }
     }
 
     /**
@@ -130,67 +138,38 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
      *
      * @param response the raw client response.
      * @throws ApiHttpStatusException if the server answered with a non-2xx status.
-     * @throws RestClientException    if the response carries no usable HTTP status.
      */
     private void ensureSuccessful(RestClientApiResponse response) {
-        if (response.isSuccessful()) {
-            return;
+        if (!response.isSuccessful()) {
+            throw new ApiHttpStatusException(response.statusCode(), response.body());
         }
-
-        int statusCode = response.getStatusCode();
-        if (statusCode < 0) {
-            throw new RestClientException(
-                    NO_HTTP_STATUS_EXCEPTION + " Body: " + response.getResponseAsString());
-        }
-
-        throw new ApiHttpStatusException(statusCode, response.getResponseAsString());
     }
 
     /**
-     * Synchronously dispatches the request and transforms the {@link HttpResponse}
-     * into a domain-specific {@link RestClientApiResponse}.
+     * Synchronously dispatches the request and returns the response exactly as received.
+     *
+     * @throws ApiTransportException if the request failed before a response was received.
      */
     private RestClientApiResponse executeRequest(HttpRequest request) {
-        RestClientApiResponse clientResponse = new RestClientApiResponse();
-
         try {
             HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            int statusCode = httpResponse.statusCode();
-            try {
-                clientResponse.setStatuses(statusGenerator.generateHttpStatusInfo(HttpStatus.valueOf(statusCode)));
-            } catch (Exception e) {
-                log.warn("Received non-standard HTTP status code: {}", statusCode);
-            }
-
-            String body = httpResponse.body();
-            clientResponse.setResponseAsString(body);
-
-            Map<String, String> headersMap = httpResponse.headers().map().entrySet().stream()
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            e -> String.join("; ", e.getValue())
-                    ));
-            clientResponse.setHeaders(headersMap);
-
-            if (body != null && !body.isBlank()) {
-                clientResponse.setResponseAsJson(objectMapper.readTree(body));
-            } else {
-                clientResponse.setResponseAsJson(objectMapper.createObjectNode());
-            }
-
-        } catch (IOException | InterruptedException e) {
-            log.error(HTTP_REQUEST_FAILED, request.uri(), e);
-            clientResponse.setStatuses(statusGenerator.generateHttpStatusInfo(HttpStatus.SERVICE_UNAVAILABLE));
-            clientResponse.setResponseAsString(e.getMessage());
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-        } catch (Exception e) {
-            log.error(UNKNOWN_HTTP_STATUS_CODE, request.uri(), e.getMessage());
-            clientResponse.setStatuses(statusGenerator.generateHttpStatusInfo(HttpStatus.INTERNAL_SERVER_ERROR));
+            return new RestClientApiResponse(httpResponse.statusCode(), httpResponse.body(), headersOf(httpResponse));
+        } catch (IOException e) {
+            throw new ApiTransportException(TRANSPORT_FAILURE.formatted(request.uri()), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ApiTransportException(TRANSPORT_FAILURE.formatted(request.uri()), e);
         }
+    }
 
-        return clientResponse;
+    /**
+     * Flattens the response headers, joining the values of a repeated header with {@code "; "}.
+     */
+    private static Map<String, String> headersOf(HttpResponse<?> httpResponse) {
+        return httpResponse.headers().map().entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> String.join("; ", e.getValue())
+                ));
     }
 }

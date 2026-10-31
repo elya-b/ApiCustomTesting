@@ -1,8 +1,8 @@
 package restclient.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import com.sun.net.httpserver.*;
-import elya.*;
 import elya.restclient.exceptions.*;
 import elya.restclient.http.*;
 import org.junit.jupiter.api.*;
@@ -24,20 +24,23 @@ import static org.springframework.http.HttpHeaders.*;
  * <ul>
  *   <li>{@code get()} — returns a JsonNode for a successful response (200)</li>
  *   <li>{@code get()} — throws ApiHttpStatusException with status 500 for a server error</li>
+ *   <li>{@code get()} — keeps a non-standard status code (520) in ApiHttpStatusException</li>
+ *   <li>{@code get()} — keeps the real status and body when an error body is not JSON (502 HTML)</li>
+ *   <li>{@code get()} — throws RestClientException with the parse error when a 200 body is not JSON</li>
  *   <li>{@code get()} — returns an empty ObjectNode when the response body is empty</li>
  *   <li>{@code get()} — forwards custom headers to the server</li>
- *   <li>{@code get()} — throws ApiHttpStatusException with status 503 when the host is unreachable</li>
+ *   <li>{@code get()} — throws ApiTransportException when the host is unreachable</li>
  *   <li>{@code post()} — sends the body and returns the echoed JSON response</li>
  *   <li>{@code post()} — does not throw for a null body</li>
  *   <li>{@code post()} — throws ApiHttpStatusException with status 500 when the server returns 500</li>
  *   <li>{@code delete(url)} — does not throw for a 200 response</li>
  *   <li>{@code delete(url)} — throws ApiHttpStatusException with status 404 for a missing resource</li>
  *   <li>{@code delete(url, headers)} — does not throw when using the headers overload</li>
- *   <li>{@code delete(url)} — throws ApiHttpStatusException with status 503 when the host is unreachable</li>
- *   <li>{@code sendRequest()} — populates the statuses map with the HTTP status code</li>
- *   <li>{@code sendRequest()} — populates the response headers</li>
- *   <li>{@code sendRequest()} — populates responseAsString with the raw body</li>
- *   <li>{@code sendRequest()} — populates responseAsJson with the parsed tree</li>
+ *   <li>{@code delete(url)} — throws ApiTransportException when the host is unreachable</li>
+ *   <li>{@code sendRequest()} — returns the HTTP status code</li>
+ *   <li>{@code sendRequest()} — returns the response headers</li>
+ *   <li>{@code sendRequest()} — returns the raw body</li>
+ *   <li>{@code sendRequest()} — returns a body that is not JSON as is, without parsing it</li>
  *   <li>{@code sendRequest()} — isSuccessful() reflects the status code (200=true, 404/500=false)</li>
  *   <li>{@code sendRequest()} — does not throw for standard HTTP methods GET, POST, DELETE (parameterized)</li>
  *   <li>{@code setBaseUrl()} — subsequent requests use the updated base URL</li>
@@ -47,13 +50,19 @@ import static org.springframework.http.HttpHeaders.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class RestClientApiEngineTests {
 
+    /** A real-world code outside Spring's HttpStatus enum (e.g. returned by Cloudflare). */
+    private static final int NON_STANDARD_STATUS = 520;
+
+    /** A port nothing listens on, so every request to it fails before a response arrives. */
+    private static final String UNREACHABLE_URL = "http://localhost:1";
+
+    private static final String PLAIN_TEXT_BODY = "plain text";
+
     private HttpServer server;
     private RestClientApiEngine engine;
     private String baseUrl;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final ApiEmulatorHttpStatusInfoGenerator statusGenerator =
-            new ApiEmulatorHttpStatusInfoGenerator() {};
 
     @BeforeAll
     void startServer() throws IOException {
@@ -106,6 +115,30 @@ public class RestClientApiEngineTests {
             try (OutputStream os = ex.getResponseBody()) { os.write(body); }
         });
 
+        // GET /non-standard — 520, a status code that Spring's HttpStatus enum does not know
+        server.createContext("/non-standard", ex -> {
+            byte[] body = "{\"error\":\"unknown\"}".getBytes(StandardCharsets.UTF_8);
+            ex.getResponseHeaders().set(CONTENT_TYPE, "application/json");
+            ex.sendResponseHeaders(NON_STANDARD_STATUS, body.length);
+            try (OutputStream os = ex.getResponseBody()) { os.write(body); }
+        });
+
+        // GET /html-error — 502 with an HTML page, as a proxy in front of a server returns it
+        server.createContext("/html-error", ex -> {
+            byte[] body = "<html>Bad Gateway</html>".getBytes(StandardCharsets.UTF_8);
+            ex.getResponseHeaders().set(CONTENT_TYPE, "text/html");
+            ex.sendResponseHeaders(502, body.length);
+            try (OutputStream os = ex.getResponseBody()) { os.write(body); }
+        });
+
+        // GET /not-json — 200 with a plain text body
+        server.createContext("/not-json", ex -> {
+            byte[] body = PLAIN_TEXT_BODY.getBytes(StandardCharsets.UTF_8);
+            ex.getResponseHeaders().set(CONTENT_TYPE, "text/plain");
+            ex.sendResponseHeaders(200, body.length);
+            try (OutputStream os = ex.getResponseBody()) { os.write(body); }
+        });
+
         // GET /headers-check — returns the Authorization header value as JSON
         server.createContext("/headers-check", ex -> {
             String auth = ex.getRequestHeaders().getFirst(AUTHORIZATION);
@@ -119,7 +152,7 @@ public class RestClientApiEngineTests {
         server.start();
         int port = server.getAddress().getPort();
         baseUrl = "http://localhost:" + port;
-        engine = new RestClientApiEngine(baseUrl, statusGenerator);
+        engine = new RestClientApiEngine(baseUrl);
     }
 
     @AfterAll
@@ -153,6 +186,48 @@ public class RestClientApiEngineTests {
     }
 
     @Test
+    @DisplayName("get() - Should keep a non-standard status code in ApiHttpStatusException")
+    void get_ShouldKeepNonStandardStatusCode() {
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> engine.get("/non-standard", Collections.emptyMap()));
+
+        assertAll(
+                () -> assertEquals(NON_STANDARD_STATUS, exception.getStatusCode(),
+                        "A status code outside Spring's HttpStatus enum must reach the caller unchanged"),
+                () -> assertTrue(exception.getResponseBody().contains("unknown"),
+                        "Body must be preserved, got: " + exception.getResponseBody())
+        );
+    }
+
+    @Test
+    @DisplayName("get() - Should keep the real status and body when an error body is not JSON")
+    void get_ShouldKeepRealStatusAndBody_WhenErrorBodyIsNotJson() {
+        var exception = assertThrows(ApiHttpStatusException.class,
+                () -> engine.get("/html-error", Collections.emptyMap()));
+
+        assertAll(
+                () -> assertEquals(502, exception.getStatusCode(),
+                        "A non-JSON error body must not turn the real status into another one"),
+                () -> assertTrue(exception.getResponseBody().contains("Bad Gateway"),
+                        "The raw body must be preserved, got: " + exception.getResponseBody())
+        );
+    }
+
+    @Test
+    @DisplayName("get() - Should throw RestClientException with the parse error when a 200 body is not JSON")
+    void get_ShouldThrowRestClientException_WhenSuccessfulBodyIsNotJson() {
+        var exception = assertThrows(RestClientException.class,
+                () -> engine.get("/not-json", Collections.emptyMap()));
+
+        assertAll(
+                () -> assertFalse(exception instanceof ApiHttpStatusException,
+                        "A 200 response is not an HTTP status failure"),
+                () -> assertInstanceOf(JsonProcessingException.class, exception.getCause(),
+                        "The parse error must be kept as the cause")
+        );
+    }
+
+    @Test
     @DisplayName("get() - Should return empty ObjectNode when body is empty")
     void get_ShouldReturnEmptyObjectNode_WhenBodyIsEmpty() {
         JsonNode result = engine.get("/empty", Collections.emptyMap());
@@ -174,15 +249,14 @@ public class RestClientApiEngineTests {
     }
 
     @Test
-    @DisplayName("get() - Should throw ApiHttpStatusException with status 503 when host is unreachable")
-    void get_ShouldThrowWithStatus503_WhenHostIsUnreachable() {
-        RestClientApiEngine badEngine = new RestClientApiEngine("http://localhost:1", statusGenerator);
+    @DisplayName("get() - Should throw ApiTransportException when host is unreachable")
+    void get_ShouldThrowTransportException_WhenHostIsUnreachable() {
+        RestClientApiEngine badEngine = new RestClientApiEngine(UNREACHABLE_URL);
 
-        var exception = assertThrows(ApiHttpStatusException.class,
+        var exception = assertThrows(ApiTransportException.class,
                 () -> badEngine.get("/unreachable", Collections.emptyMap()));
 
-        assertEquals(503, exception.getStatusCode(),
-                "A transport failure is reported as 503 by the engine");
+        assertNotNull(exception.getCause(), "The network failure must be kept as the cause");
     }
 
     // --- POST TESTS ---
@@ -241,52 +315,52 @@ public class RestClientApiEngineTests {
     }
 
     @Test
-    @DisplayName("delete(url) - Should surface a connection failure as 503")
-    void delete_ShouldThrow503_WhenHostIsUnreachable() {
-        RestClientApiEngine badEngine = new RestClientApiEngine("http://localhost:1", statusGenerator);
+    @DisplayName("delete(url) - Should throw ApiTransportException when host is unreachable")
+    void delete_ShouldThrowTransportException_WhenHostIsUnreachable() {
+        RestClientApiEngine badEngine = new RestClientApiEngine(UNREACHABLE_URL);
 
-        var exception = assertThrows(ApiHttpStatusException.class, () -> badEngine.delete("/unreachable"));
+        var exception = assertThrows(ApiTransportException.class, () -> badEngine.delete("/unreachable"));
 
-        assertEquals(503, exception.getStatusCode(),
-                "A connection failure must surface as 503, not as a silent false");
+        assertNotNull(exception.getCause(), "The network failure must be kept as the cause");
     }
 
     // --- sendRequest() TESTS ---
 
     @Test
-    @DisplayName("sendRequest() - Should populate statuses map with HTTP status code")
-    void sendRequest_ShouldPopulateStatuses() {
+    @DisplayName("sendRequest() - Should return the HTTP status code")
+    void sendRequest_ShouldReturnStatusCode() {
         var response = engine.sendRequest(HttpMethod.GET, "/ok", null, Collections.emptyMap());
 
-        assertNotNull(response.getStatuses());
-        assertEquals(200, response.getStatuses().get("status"));
+        assertEquals(200, response.statusCode());
     }
 
     @Test
-    @DisplayName("sendRequest() - Should populate response headers")
-    void sendRequest_ShouldPopulateResponseHeaders() {
+    @DisplayName("sendRequest() - Should return the response headers")
+    void sendRequest_ShouldReturnResponseHeaders() {
         var response = engine.sendRequest(HttpMethod.GET, "/ok", null, Collections.emptyMap());
 
-        assertNotNull(response.getHeaders());
-        assertFalse(response.getHeaders().isEmpty());
+        assertNotNull(response.headers());
+        assertFalse(response.headers().isEmpty());
     }
 
     @Test
-    @DisplayName("sendRequest() - Should populate responseAsString with raw body")
-    void sendRequest_ShouldPopulateResponseAsString() {
+    @DisplayName("sendRequest() - Should return the raw body")
+    void sendRequest_ShouldReturnRawBody() {
         var response = engine.sendRequest(HttpMethod.GET, "/ok", null, Collections.emptyMap());
 
-        assertNotNull(response.getResponseAsString());
-        assertTrue(response.getResponseAsString().contains("success"));
+        assertNotNull(response.body());
+        assertTrue(response.body().contains("success"));
     }
 
     @Test
-    @DisplayName("sendRequest() - Should populate responseAsJson with parsed tree")
-    void sendRequest_ShouldPopulateResponseAsJson() {
-        var response = engine.sendRequest(HttpMethod.GET, "/ok", null, Collections.emptyMap());
+    @DisplayName("sendRequest() - Should return a body that is not JSON as is, without parsing it")
+    void sendRequest_ShouldReturnBodyAsIs_WhenBodyIsNotJson() {
+        var response = engine.sendRequest(HttpMethod.GET, "/not-json", null, Collections.emptyMap());
 
-        assertNotNull(response.getResponseAsJson());
-        assertFalse(response.getResponseAsJson().isEmpty());
+        assertAll(
+                () -> assertEquals(200, response.statusCode(), "Status code must be 200"),
+                () -> assertEquals(PLAIN_TEXT_BODY, response.body(), "Body must be returned unchanged")
+        );
     }
 
     @Test
@@ -315,7 +389,7 @@ public class RestClientApiEngineTests {
     @Test
     @DisplayName("setBaseUrl() - Should use updated base URL for subsequent requests")
     void setBaseUrl_ShouldAffectSubsequentRequests() {
-        RestClientApiEngine flexEngine = new RestClientApiEngine("http://localhost:1", statusGenerator);
+        RestClientApiEngine flexEngine = new RestClientApiEngine(UNREACHABLE_URL);
         flexEngine.setBaseUrl(baseUrl);
 
         JsonNode result = flexEngine.get("/ok", Collections.emptyMap());
@@ -330,7 +404,7 @@ public class RestClientApiEngineTests {
     @Test
     @DisplayName("get() - Should work with absolute URL, ignoring baseUrl")
     void get_ShouldWorkWithAbsoluteUrl() {
-        RestClientApiEngine anyEngine = new RestClientApiEngine("http://localhost:1", statusGenerator);
+        RestClientApiEngine anyEngine = new RestClientApiEngine(UNREACHABLE_URL);
 
         JsonNode result = anyEngine.get(baseUrl + "/ok", Collections.emptyMap());
 
