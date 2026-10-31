@@ -1,6 +1,5 @@
 package elya.emulator.services;
 
-import elya.*;
 import elya.apicontracts.*;
 import elya.dto.bankcard.*;
 import elya.emulator.repository.*;
@@ -23,7 +22,7 @@ import static elya.emulator.logging.SensitiveDataMasker.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MockService implements IBankCardApi, IMockControlApi, ApiEmulatorHttpStatusInfoGenerator {
+public class MockService implements IBankCardApi, IMockControlApi {
 
     private final MockRepository mockRepository;
     private static final BankCardListResponse EMPTY_RESPONSE = BankCardListResponse.of(Collections.emptyList());

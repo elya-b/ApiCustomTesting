@@ -1,7 +1,6 @@
 package elya.engine.services.emulator.config;
 
 import com.fasterxml.jackson.databind.*;
-import elya.*;
 import elya.emulator.credentials.*;
 import elya.engine.services.emulator.*;
 import elya.restclient.api.*;
@@ -33,22 +32,15 @@ public class EmulatorTestConfig {
         return new ObjectMapper();
     }
 
-    /** Builds the HTTP status metadata attached to every client response. */
-    @Bean
-    public ApiEmulatorHttpStatusInfoGenerator httpStatusInfoGenerator() {
-        return new ApiEmulatorHttpStatusInfoGenerator() {};
-    }
-
     /**
      * REST execution engine used by all API clients.
      * <p>The base URL is set by {@link EmulatorLifecycleManager} once the emulator has started.</p>
      *
-     * @param statusGenerator service for enriching responses with HTTP metadata.
      * @return a configured {@link RestClientApiEngine}.
      */
     @Bean
-    public IRestClientApi testRestClientApiEngine(ApiEmulatorHttpStatusInfoGenerator statusGenerator) {
-        return new RestClientApiEngine("", statusGenerator);
+    public IRestClientApi testRestClientApiEngine() {
+        return new RestClientApiEngine("");
     }
 
     /**

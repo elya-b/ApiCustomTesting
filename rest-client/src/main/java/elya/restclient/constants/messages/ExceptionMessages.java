@@ -31,7 +31,11 @@ public class ExceptionMessages {
     public static final String UNEXPECTED_JSON_EXCEPTION =
             "Data Error: The server returned a JSON structure that doesn't match the expected model.";
 
-    /** Thrown when the response cannot be classified because it carries no usable HTTP status. */
-    public static final String NO_HTTP_STATUS_EXCEPTION =
-            "Transport Error: The response carries no usable HTTP status code.";
+    /** Thrown when the body of a successful response cannot be parsed as JSON. */
+    public static final String RESPONSE_NOT_JSON =
+            "Data Error: The server returned a body that is not valid JSON.";
+
+    /** Thrown when no HTTP response was received; the argument is the request URI. */
+    public static final String TRANSPORT_FAILURE =
+            "Transport Error: No HTTP response received from %s";
 }
