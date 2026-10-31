@@ -84,25 +84,16 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>get-aspectjweaver</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>properties</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
+            <!--
+                The argLine below replaces the inherited one, so it lists both agents:
+                Mockito (inline mock maker) and AspectJ (Allure steps).
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>
+                        -javaagent:"${org.mockito:mockito-core:jar}"
                         -javaagent:"${org.aspectj:aspectjweaver:jar}"
                     </argLine>
                 </configuration>
@@ -113,6 +104,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
                     <argLine>
+                        -javaagent:"${org.mockito:mockito-core:jar}"
                         -javaagent:"${org.aspectj:aspectjweaver:jar}"
                     </argLine>
                 </configuration>

@@ -120,6 +120,26 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <!--
+                Sets a property with the jar path of every dependency, e.g. ${org.mockito:mockito-core:jar},
+                so test JVMs can load agents at startup (-javaagent) instead of attaching them at runtime.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>resolve-dependency-jar-paths</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -127,15 +147,30 @@
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>${maven-dependency-plugin.version}</version>
                 </plugin>
+
+                <!--
+                    Mockito's inline mock maker needs the byte-buddy agent. Loading it at startup follows
+                    the Mockito documentation for Java 21+ and JEP 451, which disallows dynamic agent loading.
+                -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <argLine>
+                            -javaagent:"${org.mockito:mockito-core:jar}"
+                        </argLine>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven-failsafe-plugin.version}</version>
+                    <configuration>
+                        <argLine>
+                            -javaagent:"${org.mockito:mockito-core:jar}"
+                        </argLine>
+                    </configuration>
                 </plugin>
 
                 <plugin>
