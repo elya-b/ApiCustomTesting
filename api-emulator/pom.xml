@@ -73,4 +73,20 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <!--
+                Provides spring-boot:run only. No repackage execution: test-framework depends on this jar,
+                and a repackaged jar moves the classes to BOOT-INF/classes, where dependants cannot see them.
+            -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>elya.emulator.ApiEmulator</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

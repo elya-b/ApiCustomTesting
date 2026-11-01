@@ -199,6 +199,13 @@
                     </configuration>
                 </plugin>
 
+                <!-- Only the version: modules that run as applications declare the plugin themselves -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
+
                 <plugin>
                     <groupId>io.qameta.allure</groupId>
                     <artifactId>allure-maven</artifactId>
