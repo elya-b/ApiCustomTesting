@@ -10,37 +10,32 @@
     <packaging>pom</packaging>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.30</lombok.version>
         <spring-boot.version>3.5.7</spring-boot.version>
         <jjwt.version>0.13.0</jjwt.version>
         <springdoc.version>2.8.5</springdoc.version>
+        <swagger-annotations.version>2.2.28</swagger-annotations.version>
         <allure.version>2.33.0</allure.version>
         <allure-maven.version>2.15.0</allure-maven.version>
         <aspectj.version>1.9.25.1</aspectj.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
         <maven-dependency-plugin.version>3.10.0</maven-dependency-plugin.version>
-        <swagger-annotations.version>2.2.28</swagger-annotations.version>
     </properties>
 
     <modules>
-        <module>api-emulator</module>
         <module>domain-objects</module>
+        <module>api-contracts</module>
+        <module>api-emulator</module>
         <module>rest-client</module>
         <module>test-framework</module>
-        <module>api-contracts</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>elya</groupId>
-                <artifactId>api-emulator</artifactId>
-                <version>${project.version}</version>
-            </dependency>
             <dependency>
                 <groupId>elya</groupId>
                 <artifactId>domain-objects</artifactId>
@@ -48,15 +43,21 @@
             </dependency>
             <dependency>
                 <groupId>elya</groupId>
-                <artifactId>rest-client</artifactId>
+                <artifactId>api-contracts</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>elya</groupId>
-                <artifactId>api-contracts</artifactId>
+                <artifactId>api-emulator</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>elya</groupId>
+                <artifactId>rest-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
+            <!-- Pinned here because the annotation processor path below needs the same version -->
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
@@ -73,9 +74,18 @@
 
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt</artifactId>
+                <artifactId>jjwt-api</artifactId>
                 <version>${jjwt.version}</version>
-                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jjwt.version}</version>
             </dependency>
 
             <dependency>
@@ -84,6 +94,7 @@
                 <version>${springdoc.version}</version>
             </dependency>
 
+            <!-- Keep in step with the swagger-core version that springdoc brings -->
             <dependency>
                 <groupId>io.swagger.core.v3</groupId>
                 <artifactId>swagger-annotations-jakarta</artifactId>
@@ -91,30 +102,19 @@
             </dependency>
 
             <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-test</artifactId>
-                <version>${spring-boot.version}</version>
-                <scope>test</scope>
-            </dependency>
-
-            <dependency>
                 <groupId>io.qameta.allure</groupId>
                 <artifactId>allure-java-commons</artifactId>
                 <version>${allure.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>io.qameta.allure</groupId>
                 <artifactId>allure-junit5</artifactId>
                 <version>${allure.version}</version>
-                <scope>test</scope>
             </dependency>
-
             <dependency>
                 <groupId>org.aspectj</groupId>
                 <artifactId>aspectjweaver</artifactId>
                 <version>${aspectj.version}</version>
-                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -142,6 +142,32 @@
 
         <pluginManagement>
             <plugins>
+                <!--
+                    Annotation processors are listed explicitly: from JDK 23 javac no longer runs processors
+                    it only finds on the classpath. Lombok must run before the configuration processor.
+                    -parameters keeps method parameter names for Spring, as spring-boot-starter-parent does.
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <parameters>true</parameters>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-configuration-processor</artifactId>
+                                <version>${spring-boot.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
