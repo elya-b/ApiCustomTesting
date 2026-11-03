@@ -54,7 +54,8 @@ public class ApiEmulatorCredentialsStructure {
         @NotBlank(message = "Config error: invalid credentials or missing fields in YAML")
         private String login;
 
-        /** Plain-text or encrypted password for the user. */
+        /** Plain-text or encrypted password for the user; never part of {@code toString()}. */
+        @ToString.Exclude
         @NotBlank(message = "Config error: invalid credentials or missing fields in YAML")
         private String password;
 
