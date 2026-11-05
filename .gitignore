@@ -42,6 +42,7 @@ build/
 ### Allure ###
 allure-results/
 allure-report/
+.allure/
 
 ### Emulator runtime storage (contains live session tokens) ###
 session.json
