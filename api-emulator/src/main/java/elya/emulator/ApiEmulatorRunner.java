@@ -5,6 +5,9 @@ import lombok.extern.slf4j.*;
 import org.springframework.boot.*;
 import org.springframework.context.*;
 
+import java.util.*;
+import java.util.stream.*;
+
 /**
  * Low-level runner responsible for managing the Spring Boot application context of the API Emulator.
  * Provides granular control over the application lifecycle, including programmatically starting
@@ -13,6 +16,13 @@ import org.springframework.context.*;
 @Slf4j
 public class ApiEmulatorRunner {
     private final int initialPort;
+
+    /**
+     * Extra properties passed to the emulator on startup, as command line arguments.
+     * They take precedence over the configuration files, so a caller can give each
+     * emulator its own settings, for example its own storage files.
+     */
+    private final Map<String, String> properties;
 
     /**
      * The actual port the emulator is bound to.
@@ -35,11 +45,24 @@ public class ApiEmulatorRunner {
      * @param initialPort the preferred port number to bind the emulator to (use 0 for a random available port).
      */
     public ApiEmulatorRunner(int initialPort) {
-        this.initialPort = initialPort;
+        this(initialPort, Map.of());
     }
 
     /**
-     * Launches the Spring Boot application using the {@link ApiEmulator} configuration.
+     * Constructs a runner with a target port and extra startup properties.
+     *
+     * @param initialPort the preferred port number to bind the emulator to (use 0 for a random available port).
+     * @param properties  property names and values that override the configuration files
+     *                    of this emulator only, e.g. {@code api.emulator.storage.sessions.path}.
+     */
+    public ApiEmulatorRunner(int initialPort, Map<String, String> properties) {
+        this.initialPort = initialPort;
+        this.properties = Map.copyOf(properties);
+    }
+
+    /**
+     * Launches the Spring Boot application using the {@link ApiEmulator} configuration
+     * and the extra properties given to the constructor.
      * If an instance is already active, the request is ignored to prevent context duplication.
      * Upon startup, resolves the local server port and logs the status.
      */
@@ -48,8 +71,7 @@ public class ApiEmulatorRunner {
             return;
         }
 
-        String[] args = new String[]{"--server.port=" + initialPort};
-        this.appContext = SpringApplication.run(ApiEmulator.class, args);
+        this.appContext = SpringApplication.run(ApiEmulator.class, startupArguments());
 
         if (appContext != null && appContext.isRunning()) {
             this.actualPort = appContext.getEnvironment()
@@ -99,5 +121,17 @@ public class ApiEmulatorRunner {
      */
     public <T> T getBean(Class<T> beanClass) {
         return appContext.getBean(beanClass);
+    }
+
+    /**
+     * Builds the command line arguments: the port first, then the extra properties.
+     *
+     * @return the arguments in the {@code --name=value} form Spring Boot reads
+     */
+    private String[] startupArguments() {
+        return Stream.concat(
+                        Stream.of("--server.port=" + initialPort),
+                        properties.entrySet().stream().map(e -> "--" + e.getKey() + "=" + e.getValue()))
+                .toArray(String[]::new);
     }
 }

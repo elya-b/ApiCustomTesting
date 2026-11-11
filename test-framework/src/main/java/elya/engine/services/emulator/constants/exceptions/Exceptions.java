@@ -10,8 +10,11 @@ import lombok.experimental.*;
 @UtilityClass
 public class Exceptions {
 
-    /** Logged or thrown when the emulator fails to produce a valid JWT/Session token during setup. */
+    /** Thrown when the emulator does not return a valid session token during setup. */
     public static final String FAILED_TO_GENERATE_AUTH_TOKEN = "Failed to generate auth token";
+
+    /** Thrown when the token response cannot be mapped to {@code AuthResponse}. */
+    public static final String FAILED_TO_READ_AUTH_RESPONSE = "Failed to read the auth token response";
 
     /** * Base message for timeout scenarios.
      * Usually followed by the time duration and unit (e.g., "30 seconds").

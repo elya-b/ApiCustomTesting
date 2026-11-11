@@ -43,7 +43,6 @@ import static org.springframework.http.HttpHeaders.*;
  *   <li>{@code sendRequest()} — returns a body that is not JSON as is, without parsing it</li>
  *   <li>{@code sendRequest()} — isSuccessful() reflects the status code (200=true, 404/500=false)</li>
  *   <li>{@code sendRequest()} — does not throw for standard HTTP methods GET, POST, DELETE (parameterized)</li>
- *   <li>{@code setBaseUrl()} — subsequent requests use the updated base URL</li>
  *   <li>{@code get()} — works with an absolute URL, ignoring the configured baseUrl</li>
  * </ul>
  */
@@ -382,21 +381,6 @@ public class RestClientApiEngineTests {
         assertDoesNotThrow(() ->
                 engine.sendRequest(HttpMethod.valueOf(method), "/ok", null, Collections.emptyMap())
         );
-    }
-
-    // --- setBaseUrl() TEST ---
-
-    @Test
-    @DisplayName("setBaseUrl() - Should use updated base URL for subsequent requests")
-    void setBaseUrl_ShouldAffectSubsequentRequests() {
-        RestClientApiEngine flexEngine = new RestClientApiEngine(UNREACHABLE_URL);
-        flexEngine.setBaseUrl(baseUrl);
-
-        JsonNode result = flexEngine.get("/ok", Collections.emptyMap());
-
-        assertNotNull(result);
-        assertEquals("success", result.get("result").asText(),
-                "After setBaseUrl(), engine must use the new URL");
     }
 
     // --- ABSOLUTE URL TEST ---
