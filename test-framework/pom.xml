@@ -88,6 +88,12 @@
                 </configuration>
             </plugin>
 
+            <!--
+                Integration test classes run in parallel (see junit-platform.properties), so several
+                emulators can start at the same time in one JVM. Spring Boot re-initializes Logback,
+                which is global to the JVM, on every start; turning that off keeps the logs of
+                emulators that start together intact. logback-test.xml still configures the output.
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
@@ -96,6 +102,9 @@
                         -javaagent:"${org.mockito:mockito-core:jar}"
                         -javaagent:"${org.aspectj:aspectjweaver:jar}"
                     </argLine>
+                    <systemPropertyVariables>
+                        <org.springframework.boot.logging.LoggingSystem>none</org.springframework.boot.logging.LoggingSystem>
+                    </systemPropertyVariables>
                 </configuration>
                 <executions>
                     <execution>
