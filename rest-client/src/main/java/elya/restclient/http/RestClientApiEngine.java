@@ -3,7 +3,6 @@ package elya.restclient.http;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import elya.restclient.exceptions.*;
-import lombok.*;
 import lombok.extern.slf4j.*;
 import org.springframework.http.*;
 
@@ -28,6 +27,9 @@ import static org.springframework.http.HttpHeaders.*;
  *   <li>the server answered with a non-2xx status — {@link ApiHttpStatusException};</li>
  *   <li>a successful response body is not valid JSON — {@link RestClientException}.</li>
  * </ul>
+ * <p>The engine is immutable after construction: the base URL cannot change, and both
+ * {@link HttpClient} and {@link ObjectMapper} are thread-safe. One engine can therefore
+ * serve parallel tests, and each emulator gets an engine bound to its own address.</p>
  */
 @Slf4j
 public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine {
@@ -35,13 +37,13 @@ public class RestClientApiEngine implements IRestClientApi, IRestClientApiEngine
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Setter
-    private String baseUrl;
+    /** Root address of the API; fixed for the lifetime of the engine. */
+    private final String baseUrl;
 
     /**
      * Initializes the engine with default timeouts.
      *
-     * @param baseUrl the target API root address.
+     * @param baseUrl the target API root address; it cannot be changed later.
      */
     public RestClientApiEngine(String baseUrl) {
         this.baseUrl = baseUrl;

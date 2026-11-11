@@ -8,7 +8,6 @@ import elya.emulator.credentials.*;
 import elya.engine.services.emulator.*;
 import elya.restclient.api.*;
 import io.qameta.allure.*;
-import lombok.extern.slf4j.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.*;
 
@@ -17,12 +16,14 @@ import java.nio.charset.*;
 
 /**
  * Abstract base class for all API integration tests.
- * <p>Handles the full emulator lifecycle ({@code start}/{@code stop}) around each test method
- * and provides shared helper utilities for authentication and assertion steps.</p>
+ * <p>Gives every test method its own {@link EmulatorSession}: a fresh emulator on a free port,
+ * a client bound to it and a storage directory of its own. JUnit creates a new test instance
+ * for every method, so the {@code emulator} and {@code clientApi} fields are never shared
+ * between tests, and test classes can run in parallel.</p>
  * <p>Concrete test classes inherit the following behaviour:</p>
  * <ul>
- *   <li>{@code setUp()} — starts the emulator and authenticates as admin before each test</li>
- *   <li>{@code tearDown()} — stops the emulator after each test</li>
+ *   <li>{@code setUp()} — starts a session and authenticates as admin before each test</li>
+ *   <li>{@code tearDown()} — closes the session after each test</li>
  *   <li>{@code switchUserAndGetToken(Role)} — authenticates as a user with the specified role</li>
  *   <li>{@code prepareLoginRequest(String, String)} — builds an {@link AuthRequest} from credentials</li>
  *   <li>{@code prepareLoginRequest(Role)} — builds an {@link AuthRequest} by role lookup</li>
@@ -32,34 +33,36 @@ import java.nio.charset.*;
  *       and attaches it to the current Allure step using the provided label</li>
  * </ul>
  */
-@Slf4j
 @ApiIntegrationTest
 public abstract class AbstractApiTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Autowired
-    protected EmulatorLifecycleManager emulator;
-    @Autowired
-    protected RestClientApi clientApi;
+    private EmulatorLifecycleManager emulatorManager;
     @Autowired
     protected ApiEmulatorCredentialsService credentialsService;
+
+    /** The emulator session of the current test; started in {@link #setUp()}. */
+    protected EmulatorSession emulator;
+
+    /** The client under test, bound to the emulator of the current test. */
+    protected RestClientApi clientApi;
 
     @BeforeEach
     @Step("Setup: start emulator and authenticate as admin")
     protected void setUp() {
         var adminUser = credentialsService.getApiEmulatorCredentials().getUsers().getFirst();
-        if (adminUser != null) {
-            emulator.start(prepareLoginRequest(adminUser.getLogin(), adminUser.getPassword()));
-        } else {
-            log.error("Can't start emulator because user is NULL!");
-        }
+        emulator = emulatorManager.start(prepareLoginRequest(adminUser.getLogin(), adminUser.getPassword()));
+        clientApi = emulator.getClientApi();
     }
 
     @AfterEach
     @Step("Teardown: stop emulator")
     protected void tearDown() {
-        if (emulator != null) emulator.stop();
+        if (emulator != null) {
+            emulator.close();
+        }
     }
 
     protected String switchUserAndGetToken(Role role) {

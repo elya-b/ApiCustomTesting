@@ -2,6 +2,8 @@ import elya.emulator.*;
 import elya.emulator.repository.*;
 import org.junit.jupiter.api.*;
 
+import java.util.*;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -11,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>{@code start()} launches the application, sets port and context</li>
  *   <li>{@code start()} ignores a second call when the server is already running</li>
  *   <li>{@code start()} assigns a random port when port=0</li>
+ *   <li>{@code start()} applies the extra properties given to the constructor</li>
  *   <li>{@code start()} throws an exception when the port is already in use</li>
  *   <li>{@code stop()} shuts down the application; context becomes null</li>
  *   <li>{@code getBean()} returns a bean by type when context is active</li>
@@ -64,6 +67,17 @@ public class ApiEmulatorRunnerTests {
 
         assertTrue(runner.isRunning());
         assertTrue(runner.getActualPort() > 0);
+    }
+
+    @Test
+    @DisplayName("start() - Should apply the extra properties given to the constructor")
+    void start_ShouldApplyExtraProperties() {
+        runner = new ApiEmulatorRunner(0, Map.of("api.credentials.token.issuer", "runner-test"));
+        runner.start();
+
+        assertEquals("runner-test",
+                runner.getAppContext().getEnvironment().getProperty("api.credentials.token.issuer"),
+                "An extra property must override the configuration files");
     }
 
     @Test

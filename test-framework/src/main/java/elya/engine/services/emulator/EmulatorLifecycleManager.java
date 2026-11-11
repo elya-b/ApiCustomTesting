@@ -1,190 +1,176 @@
 package elya.engine.services.emulator;
 
-import com.fasterxml.jackson.core.type.*;
+import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.*;
-import elya.card.*;
 import elya.dto.auth.*;
-import elya.dto.bankcard.*;
 import elya.emulator.*;
+import elya.emulator.config.*;
 import elya.restclient.http.*;
-import jakarta.annotation.*;
-import lombok.*;
 import lombok.extern.slf4j.*;
+import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.*;
 import org.springframework.stereotype.*;
 import org.springframework.web.client.*;
 
+import java.nio.file.*;
 import java.time.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.function.*;
 
 import static elya.constants.ApiEndpoints.*;
-import static elya.constants.enums.HttpHeaderValues.*;
 import static elya.engine.services.emulator.constants.exceptions.Exceptions.*;
 import static elya.engine.services.emulator.constants.logs.InfoLogs.*;
-import static elya.enums.responsemodel.ApiBankCards.*;
-import static org.springframework.http.HttpHeaders.*;
 
 /**
- * Orchestrator for managing the API Emulator lifecycle within the testing framework.
- * <p>This manager is responsible for:
- * <ul>
- * <li>Starting and stopping the emulator process via {@link ApiEmulatorRunner}.</li>
- * <li>Monitoring the emulator health status using Spring Boot Actuator.</li>
- * <li>Handling initial authentication and session token storage.</li>
- * <li>Providing high-level methods for data seeding (mocking bank cards).</li>
- * </ul>
- * </p>
+ * Starts emulators for the integration tests, one {@link EmulatorSession} per test.
+ * <p>The manager holds no state of its own: every call to {@link #start(AuthRequest)} creates
+ * a new emulator on a free port, with its own storage directory and its own client. Tests can
+ * therefore start sessions in parallel without affecting each other.</p>
+ * <p>Startup sequence:</p>
+ * <ol>
+ *   <li>start the emulator on a free port with a storage directory of its own;</li>
+ *   <li>poll {@code /actuator/health} until the emulator answers;</li>
+ *   <li>log in and keep the session token.</li>
+ * </ol>
+ * <p>If a step after the start fails, the emulator is stopped before the exception is rethrown,
+ * so a failed setup does not leave a running server behind.</p>
  */
 @Slf4j
 @Component
 public class EmulatorLifecycleManager {
 
-    /**
-     * The base URL of the running emulator instance (e.g., http://localhost:8080).
-     * Set by {@link #start(AuthRequest)} and reset to {@code null} by {@link #stop()}.
-     */
-    @Getter
-    private String url;
+    /** How long a new emulator may take to report itself healthy. */
+    private static final Duration STARTUP_TIMEOUT = Duration.ofSeconds(30);
 
-    /**
-     * The authentication token obtained during the startup sequence.
-     * Used for subsequent authorized mock configurations.
-     * Reset to {@code null} by {@link #stop()}.
-     */
-    @Getter
-    private String authToken;
+    /** Pause between two health checks. */
+    private static final Duration HEALTH_POLL_INTERVAL = Duration.ofMillis(500);
 
-    private final ApiEmulatorRunner runner;
-    private final IRestClientApi restClient;
+    /** Properties that point the emulator's two stores to the session's directory. */
+    private static final String SESSIONS_PATH_PROPERTY = "api.emulator.storage.sessions.path";
+    private static final String MOCKS_PATH_PROPERTY = "api.emulator.storage.mocks.path";
+
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
+    private final Path storageRoot;
+    private final Duration startupTimeout;
+    private final Function<Map<String, String>, ApiEmulatorRunner> runnerFactory;
+    private final Function<String, IRestClientApi> clientFactory;
 
     /**
-     * Constructs the manager and binds it to a runner that picks a free port.
+     * Creates the manager used by the test context.
      *
-     * @param restClient   low-level client for API interactions.
-     * @param objectMapper Jackson mapper for data conversion.
-     * @param restTemplate template for health check polling.
+     * @param objectMapper mapper for request and response bodies
+     * @param restTemplate template for the health checks
+     * @param storageRoot  directory under which every session gets a directory of its own
      */
-    public EmulatorLifecycleManager(IRestClientApi restClient,
-                                    ObjectMapper objectMapper,
-                                    RestTemplate restTemplate) {
-        this.runner = new ApiEmulatorRunner(0);
-        this.restClient = restClient;
+    @Autowired
+    public EmulatorLifecycleManager(ObjectMapper objectMapper,
+                                    RestTemplate restTemplate,
+                                    @Value("${test-framework.storage-root:target/test-data}") String storageRoot) {
+        this(objectMapper, restTemplate, Path.of(storageRoot), STARTUP_TIMEOUT,
+                properties -> new ApiEmulatorRunner(0, properties),
+                RestClientApiEngine::new);
+    }
+
+    /**
+     * Creates a manager with explicit collaborators; used by unit tests.
+     *
+     * @param objectMapper   mapper for request and response bodies
+     * @param restTemplate   template for the health checks
+     * @param storageRoot    directory under which every session gets a directory of its own
+     * @param startupTimeout how long a new emulator may take to become healthy
+     * @param runnerFactory  creates a runner from the startup properties of one emulator
+     * @param clientFactory  creates a client bound to the base URL of one emulator
+     */
+    public EmulatorLifecycleManager(ObjectMapper objectMapper,
+                                    RestTemplate restTemplate,
+                                    Path storageRoot,
+                                    Duration startupTimeout,
+                                    Function<Map<String, String>, ApiEmulatorRunner> runnerFactory,
+                                    Function<String, IRestClientApi> clientFactory) {
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
+        this.storageRoot = storageRoot;
+        this.startupTimeout = startupTimeout;
+        this.runnerFactory = runnerFactory;
+        this.clientFactory = clientFactory;
     }
 
     /**
-     * Lifecycle callback executed after dependency injection.
-     * Logs the manager initialization.
-     */
-    @PostConstruct
-    public void init() {
-        log.info(MANAGER_START);
-    }
-
-    /**
-     * Triggers the full emulator startup sequence.
-     * <ol>
-     * <li>Starts the process.</li>
-     * <li>Configures the base URL for the rest client.</li>
-     * <li>Polls the health endpoint until "UP".</li>
-     * <li>Authenticates and stores the token.</li>
-     * </ol>
+     * Starts a new emulator and logs in to it.
      *
-     * @param authRequest credentials for initial login.
-     * @throws RuntimeException if startup, health check, or login fails.
+     * @param authRequest credentials of the user the session logs in as
+     * @return a ready session; the caller must close it
+     * @throws IllegalStateException if the emulator does not become healthy in time
+     *                               or does not return a session token
      */
-    public void start(AuthRequest authRequest) {
+    public EmulatorSession start(AuthRequest authRequest) {
+        Path storageDirectory = storageRoot.resolve(UUID.randomUUID().toString());
+        ApiEmulatorRunner runner = runnerFactory.apply(storageProperties(storageDirectory));
         runner.start();
-        int port = runner.getActualPort();
-        this.url = "http://localhost:" + port;
-        log.info(MANAGER_READY_ON_PORT, port);
+        try {
+            String url = "http://localhost:" + runner.getActualPort();
+            log.info(MANAGER_READY_ON_PORT, runner.getActualPort());
 
-        if (restClient instanceof RestClientApiEngine engine) {
-            engine.setBaseUrl(this.url);
+            IRestClientApi restClient = clientFactory.apply(url);
+            waitUntilReady(url);
+            String authToken = performLogin(restClient, authRequest);
+
+            log.info(SESSION_STARTED, url);
+            return new EmulatorSession(url, authToken, restClient, runner, objectMapper, storageDirectory);
+        } catch (RuntimeException e) {
+            runner.stop();
+            throw e;
         }
-        waitUntilReady(Duration.ofSeconds(30));
-
-        this.authToken = performLogin(authRequest);
-        log.info("Emulator startup complete. Service is healthy and authenticated.");
     }
 
     /**
-     * Shuts down the emulator process and forgets the session.
-     * <p>The URL and the auth token are reset first, so a stopped manager never hands out
-     * the state of a previous run. Invoked automatically by the Spring container on shutdown.</p>
-     */
-    @PreDestroy
-    public void stop() {
-        this.url = null;
-        this.authToken = null;
-        runner.stop();
-        log.info("Emulator process terminated.");
-    }
-
-    /**
-     * Internal method to perform authentication against the newly started emulator.
+     * Points both stores of one emulator to the given directory.
      *
-     * @param authRequest user credentials.
-     * @return a valid JWT or session token.
-     * @throws IllegalStateException if the token cannot be generated.
+     * @param storageDirectory the session's own directory
+     * @return startup properties for the emulator
      */
-    private String performLogin(AuthRequest authRequest) {
+    private static Map<String, String> storageProperties(Path storageDirectory) {
+        return Map.of(
+                SESSIONS_PATH_PROPERTY, storageDirectory.resolve(EmulatorStorageProperties.DEFAULT_SESSIONS_PATH).toString(),
+                MOCKS_PATH_PROPERTY, storageDirectory.resolve(EmulatorStorageProperties.DEFAULT_MOCKS_PATH).toString());
+    }
+
+    /**
+     * Logs in to a freshly started emulator.
+     *
+     * @param restClient  client bound to the emulator
+     * @param authRequest user credentials
+     * @return the session token
+     * @throws IllegalStateException if the response carries no token or cannot be read
+     */
+    private String performLogin(IRestClientApi restClient, AuthRequest authRequest) {
+        JsonNode responseNode = restClient.post(URL_TOKEN, objectMapper.valueToTree(authRequest), Map.of());
+
         AuthResponse response;
         try {
-            JsonNode body = objectMapper.valueToTree(authRequest);
-            JsonNode responseNode = restClient.post(this.url + URL_TOKEN, body, Map.of());
             response = objectMapper.treeToValue(responseNode, AuthResponse.class);
-        } catch (Exception e) {
-            log.error("Authentication failed: {}", e.getMessage());
-            throw new RuntimeException("Critical mapping error during token generation", e);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(FAILED_TO_READ_AUTH_RESPONSE, e);
         }
 
-        if (response != null && response.getSuccess() && response.getData() != null) {
-            log.info(MANAGER_AUTHENTICATED_AS, authRequest.getLogin());
-            return response.getData().getToken();
-        } else {
+        if (response == null || !Boolean.TRUE.equals(response.getSuccess()) || response.getData() == null) {
             throw new IllegalStateException(FAILED_TO_GENERATE_AUTH_TOKEN);
         }
+        log.info(MANAGER_AUTHENTICATED_AS, authRequest.getLogin());
+        return response.getData().getToken();
     }
 
     /**
-     * Seeds the emulator with a predefined list of bank cards for mocking.
-     * <p>Translates domain {@link BankCard} entities into DTOs and performs an authorized POST.</p>
+     * Polls the Actuator health endpoint until it answers with HTTP 200.
+     * <p>Checks every {@code 500 ms} until the startup timeout is reached.</p>
      *
-     * @param token authentication token.
-     * @param cards domain cards to be mocked.
-     * @return the list of cards as confirmed by the emulator.
+     * @param url base URL of the emulator
+     * @throws IllegalStateException if the emulator is not healthy within the timeout
+     *                               or the waiting thread is interrupted
      */
-    public List<BankCard> addBankCards(String token, List<BankCard> cards) {
-        List<BankCardRequest> dtos = cards.stream()
-                .map(BankCardRequest::fromDomain)
-                .collect(Collectors.toList());
-
-        Map<String, String> headers = Map.of(AUTHORIZATION, BEARER + token);
-        JsonNode responseNode = restClient.post(url + URL_BANK_CARD_DATA,
-                objectMapper.valueToTree(BankCardListRequest.of(dtos)), headers);
-
-        JsonNode cardsNode = responseNode.path(RESPONSE.toString()).path(CARDS.toString());
-        List<BankCardResponse> resultDtos = objectMapper.convertValue(cardsNode, new TypeReference<>() {});
-
-        return resultDtos.stream()
-                .map(BankCardResponse::getBankCard)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Actuator-based polling logic.
-     * <p>Wait for the service to return HTTP 200 on the /health endpoint.
-     * Uses exponential backoff (fixed 500ms) until timeout.</p>
-     *
-     * @param timeout max duration to wait.
-     */
-    private void waitUntilReady(Duration timeout) {
-        Instant deadline = Instant.now().plus(timeout);
+    private void waitUntilReady(String url) {
+        Instant deadline = Instant.now().plus(startupTimeout);
         String healthUrl = url + "/actuator/health";
 
         while (Instant.now().isBefore(deadline)) {
@@ -194,16 +180,17 @@ public class EmulatorLifecycleManager {
                     log.info(EMULATOR_IS_READY);
                     return;
                 }
-            } catch (Exception ignored) {
-                // Service not yet available, continue polling
+            } catch (RestClientException ignored) {
+                // Not accepting connections yet, poll again
             }
+
             try {
-                Thread.sleep(500);
+                Thread.sleep(HEALTH_POLL_INTERVAL.toMillis());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RuntimeException(INTERRUPTED_EMULATOR_STARTUP, e);
+                throw new IllegalStateException(INTERRUPTED_EMULATOR_STARTUP, e);
             }
         }
-        throw new RuntimeException(FAILED_TO_START_EMULATOR + timeout.toSeconds() + " seconds");
+        throw new IllegalStateException(FAILED_TO_START_EMULATOR + startupTimeout.toSeconds() + " seconds");
     }
 }
