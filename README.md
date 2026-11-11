@@ -30,7 +30,7 @@ The build has five Maven modules.
 | `api-contracts` | The API contract shared by the server and the client: endpoints, DTOs, contract interfaces, OpenAPI annotations | `ApiEndpoints`, `IAuthApi`, `IBankCardApi`, `IMockControlApi`, `AuthResponse`, `BankCardRequest` |
 | `api-emulator` | The Spring Boot service | `ApiEmulatorController`, `AuthenticationService`, `MockService`, `GlobalExceptionHandler`, `JsonSnapshotStore` |
 | `rest-client` | HTTP client: an engine on `java.net.http.HttpClient` and typed clients for each part of the API | `RestClientApiEngine`, `AuthClient`, `BankCardClient`, `MockClient`, `RestClientApi` |
-| `test-framework` | Test infrastructure and the API integration tests | `EmulatorLifecycleManager`, `EmulatorTestConfig`, `@ApiIntegrationTest`, `AbstractApiTest` |
+| `test-framework` | Test infrastructure and the API integration tests | `EmulatorLifecycleManager`, `EmulatorSession`, `EmulatorTestConfig`, `@ApiIntegrationTest`, `AbstractApiTest` |
 
 ```mermaid
 flowchart TD
@@ -51,7 +51,7 @@ Dependency rules:
 
 ### Integration test lifecycle
 
-Every integration test gets a fresh emulator on a free port, so tests do not share state and do not depend on their order.
+Every integration test gets its own `EmulatorSession`: a fresh emulator on a free port, a client bound to that emulator and a storage directory of its own. Tests share no state and do not depend on their order, so test classes run in parallel.
 
 ```mermaid
 sequenceDiagram
@@ -60,18 +60,18 @@ sequenceDiagram
     participant E as api-emulator
     participant C as rest-client
     T->>M: start() in @BeforeEach
-    M->>E: start on a free port
+    M->>E: start on a free port with its own storage directory
     loop until UP, at most 30 s
         M->>E: GET /actuator/health
     end
     M->>E: POST /auth/token as admin
     E-->>M: session token
+    M-->>T: EmulatorSession with URL, token and client
     T->>C: seed, read or delete cards
     C->>E: HTTP request with Bearer token
     E-->>C: JSON or RFC 9457 problem detail
     C-->>T: domain object or exception
-    T->>M: stop() in @AfterEach
-    M->>E: close the application context
+    T->>E: session.close() in @AfterEach
 ```
 
 ### Client failure model
@@ -130,8 +130,8 @@ class GetBankCardsDataByIdIT extends AbstractApiTest {
 }
 ```
 
-- `AbstractApiTest` starts a fresh emulator and logs in as admin before each test. `emulator.getAuthToken()` returns that session token.
-- `emulator.addBankCards(...)` seeds test data through the API, and `clientApi` is the typed client under test.
+- `AbstractApiTest` starts a new `EmulatorSession` and logs in as admin before each test, and closes it afterwards. `emulator` is that session, and `emulator.getAuthToken()` returns its token.
+- `emulator.addBankCards(...)` seeds test data through the API, and `clientApi` is the typed client under test, bound to the test's own emulator.
 - `verify(...)` runs the assertions as a named Allure step and attaches the failure message to the report. `attachJson(...)` adds a request or response body.
 - A negative test asserts on `ApiHttpStatusException`, which holds the status code and the response body.
 
@@ -312,6 +312,15 @@ curl -X POST http://localhost:8080/api/v1/elya-bank/auth/token \
 ./mvnw test -pl rest-client -Dtest=RestClientApiEngineTests
 ```
 
+Integration test classes run in parallel, three at a time, and the methods of one class run one after another. The settings are in [`junit-platform.properties`](test-framework/src/test/resources/junit-platform.properties). To compare with a sequential run:
+
+```bash
+# after ./mvnw install -DskipTests
+./mvnw verify -pl test-framework -Djunit.jupiter.execution.parallel.enabled=false
+```
+
+Several emulators can start at the same time in one JVM, and Spring Boot re-initializes the JVM-wide Logback configuration on every start. The failsafe configuration turns that off, so the logs of emulators that start together stay intact. When the tests are started from the IDE, the log lines of parallel tests can interleave; each line shows its thread.
+
 The Mockito agent is passed to the test JVM with `-javaagent` instead of being attached at runtime, as JEP 451 and the Mockito documentation recommend for Java 21.
 
 ## Test Reports
@@ -331,7 +340,8 @@ The tests of the `test-framework` module, both unit and integration, write Allur
 |---|---|---|
 | Own HTTP client instead of RestAssured | Transport errors, non-2xx statuses and non-JSON bodies are separate exceptions, and nothing is converted or retried behind the test's back | More code to maintain and no fluent given/when/then DSL |
 | One contract module for the server and the client | Both implement the same interfaces with the same DTOs, so a contract change breaks compilation on both sides | The client depends on Java types; checking the published OpenAPI document is left to the contract tests |
-| Black-box tests with a fresh emulator per test | Tests see only HTTP, as a real consumer would, and share no state | A Spring context starts for every test, so the suite is slower and runs sequentially |
+| Black-box tests with a fresh emulator per test | Tests see only HTTP, as a real consumer would, and share no state | A Spring context starts for every test, which makes each test slower |
+| A session per test instead of shared singletons | The emulator, its client and its storage directory belong to one test, so JUnit runs test classes in parallel without locks | Logback is global to the JVM, so Spring Boot's logging re-initialization is turned off for the integration tests |
 | Emulator started inside the test JVM | One command runs everything, with no Docker or deployed environment | It does not cover what a deployed service adds: real network, real environment configuration |
 | Explicit Spring contexts | The emulator scans only its own packages, and `EmulatorTestConfig` lists the test beans without component scanning, so the two contexts never mix | A new test-side bean has to be registered by hand |
 | RFC 9457 errors and OpenAPI contract tests | Clients get one error format, and Swagger UI cannot drift from the code unnoticed | Every API change also needs a change in the contract tests |
@@ -340,7 +350,7 @@ The tests of the `test-framework` module, both unit and integration, write Allur
 
 - Security is minimal on purpose: passwords are compared as plain text (`NoOpPasswordEncoder`), and roles do not restrict access. This is acceptable for a test emulator, not for a real service.
 - Token validation is stateful: a token is valid only while its session is in the session store, and the JWT signature is not checked.
-- Integration tests run one after another. Each one starts a full emulator, and the storage files have fixed paths under `target/test-data`.
+- Only test classes run in parallel; the methods of one class run one after another. Each test still starts a full emulator.
 - There is no CI pipeline yet. The next step is a GitHub Actions workflow that runs `./mvnw verify`.
 - `JwtTokenProviderTests` waits for token expiry with `Thread.sleep`. Injecting a `java.time.Clock` would make the test instant and deterministic.
 - `ApiEmulatorRunnerTests` uses the fixed port 8081 and fails if that port is busy. It should pick a free port instead.
