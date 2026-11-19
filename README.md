@@ -319,6 +319,17 @@ Integration test classes run in parallel, three at a time, and the methods of on
 ./mvnw verify -pl test-framework -Djunit.jupiter.execution.parallel.enabled=false
 ```
 
+Measured on a laptop with an Intel Core i5-9300H (4 cores, 8 threads): integration tests only (`-Dtest=none -Dsurefire.failIfNoSpecifiedTests=false`), one warm-up run discarded, then three rounds of 1, 2, 3 and 4 threads in turn. The thread count was set with `-Djunit.jupiter.execution.parallel.config.fixed.parallelism` and `-Djunit.jupiter.execution.parallel.config.fixed.max-pool-size`.
+
+| Threads | Integration tests, median | Average emulator startup |
+|---|---|---|
+| 1 | 33.2 s | 0.49 s |
+| 2 | 27.4 s | 0.77 s |
+| 3 | 26.4 s | 1.00 s |
+| 4 | 27.2 s | 1.25 s |
+
+Three threads give the best time, about 20% faster than one, and the gain stops after two. Starting Spring Boot is CPU-bound, so every extra thread makes each emulator start slower. Startups take about 20 of the 33 seconds of a sequential run, so the next step is fewer startups, for example one emulator per test class, rather than more threads.
+
 Several emulators can start at the same time in one JVM, and Spring Boot re-initializes the JVM-wide Logback configuration on every start. The failsafe configuration turns that off, so the logs of emulators that start together stay intact. When the tests are started from the IDE, the log lines of parallel tests can interleave; each line shows its thread.
 
 The Mockito agent is passed to the test JVM with `-javaagent` instead of being attached at runtime, as JEP 451 and the Mockito documentation recommend for Java 21.
