@@ -139,11 +139,11 @@ class GetBankCardsDataByIdIT extends AbstractApiTest {
 
 | Area | Tools |
 |---|---|
-| Language and build | Java 21, Maven (wrapper included), surefire and failsafe 3.5.5 |
-| Service | Spring Boot 3.5.7: Web, Validation, Actuator; springdoc-openapi 2.8.5; jjwt 0.13 |
+| Language and build | Java 21, Maven (wrapper included), surefire and failsafe 3.6 |
+| Service | Spring Boot 3.5: Web, Validation, Actuator; springdoc-openapi 2.10; jjwt 0.13 |
 | HTTP client | `java.net.http.HttpClient` (HTTP/2), Jackson |
 | Testing | JUnit 5, AssertJ, Mockito, Spring Boot Test (`MockMvc`, `@WebMvcTest`, `ApplicationContextRunner`) |
-| Reporting | Allure 2.33 with AspectJ |
+| Reporting | Allure 2.35 with AspectJ |
 | Other | Lombok |
 
 ## Emulator Features
